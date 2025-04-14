@@ -1,14 +1,4 @@
 import express from 'express';
-import { 
-  login, 
-  createAdmin, 
-  getDashboardStats,
-  getAllUsers,
-  getSingleUser,
-  createUser,
-  updateUser,
-  deleteUser
-} from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
 import {
@@ -18,18 +8,33 @@ import {
   updateUserSchema
 } from '../validations/adminValidation.js';
 
+// Import controllers
+import * as authController from '../controllers/admin/authController.js';
+import * as dashboardController from '../controllers/admin/dashboardController.js';
+import * as userController from '../controllers/admin/userController.js';
+
 const router = express.Router();
 
-// Auth routes
-router.post('/login', validateRequest(loginSchema), login);
-router.post('/create', validateRequest(createAdminSchema), createAdmin);
+// Auth routes - /api/admin/auth/*
+const authRouter = express.Router();
+authRouter.post('/login', validateRequest(loginSchema), authController.login);
+authRouter.post('/create', validateRequest(createAdminSchema), authController.createAdmin);
 
-// Protected routes
-router.get('/dashboard', protect, getDashboardStats);
-router.get('/users', protect, getAllUsers);
-router.get('/users/:id', protect, getSingleUser);
-router.post('/users', protect, validateRequest(createUserSchema), createUser);
-router.put('/users/:id', protect, validateRequest(updateUserSchema), updateUser);
-router.delete('/users/:id', protect, deleteUser);
+// Dashboard routes - /api/admin/dashboard/*
+const dashboardRouter = express.Router();
+dashboardRouter.get('/stats', protect, dashboardController.getDashboardStats);
+
+// User management routes - /api/admin/users/*
+const userRouter = express.Router();
+userRouter.get('/', protect, userController.getAllUsers);
+userRouter.get('/:id', protect, userController.getSingleUser);
+userRouter.post('/', protect, validateRequest(createUserSchema), userController.createUser);
+userRouter.put('/:id', protect, validateRequest(updateUserSchema), userController.updateUser);
+userRouter.delete('/:id', protect, userController.deleteUser);
+
+// Register sub-routers
+router.use('/auth', authRouter);
+router.use('/dashboard', dashboardRouter);
+router.use('/users', userRouter);
 
 export default router;
