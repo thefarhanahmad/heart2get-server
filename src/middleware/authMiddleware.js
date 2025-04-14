@@ -5,7 +5,6 @@ export const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check for token in Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -18,18 +17,13 @@ export const protect = async (req, res, next) => {
     }
 
     try {
-      // Verify token
+      // Debug logs
+      console.log('Received token:', token);
+      
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Decoded token:', decoded);
 
-      // Check if decoded has required fields
-      if (!decoded || !decoded.id || !decoded.email || !decoded.role) {
-        return res.status(401).json({
-          status: false,
-          message: 'Invalid token structure'
-        });
-      }
-
-      // Get admin from database
+      // Find admin by decoded token data
       const admin = await Admin.findOne({
         _id: decoded.id,
         email: decoded.email,
@@ -43,7 +37,6 @@ export const protect = async (req, res, next) => {
         });
       }
 
-      // Add admin to request object
       req.admin = admin;
       next();
     } catch (error) {
@@ -52,14 +45,14 @@ export const protect = async (req, res, next) => {
       if (error.name === 'JsonWebTokenError') {
         return res.status(401).json({
           status: false,
-          message: 'Invalid token'
+          message: 'Invalid token format or signature'
         });
       }
 
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({
           status: false,
-          message: 'Token expired'
+          message: 'Token has expired'
         });
       }
 

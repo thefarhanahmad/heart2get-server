@@ -1,4 +1,5 @@
 import express from 'express';
+import { protect } from '../middleware/authMiddleware.js';
 import {
   getUsers,
   getUser,
@@ -8,6 +9,9 @@ import {
 } from '../controllers/userController.js';
 
 const router = express.Router();
+
+// Apply protect middleware to all routes
+router.use(protect);
 
 router.get('/', getUsers);
 router.get('/:id', getUser);
