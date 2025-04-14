@@ -5,7 +5,10 @@ import Payment from '../models/paymentModel.js';
 import Chat from '../models/chatModel.js';
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined in environment variables');
+  }
+  return jwt.sign({ id: id.toString() }, process.env.JWT_SECRET, {
     expiresIn: '30d'
   });
 };
@@ -56,7 +59,7 @@ export const login = async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({
       status: false,
-      message: 'Server error during login'
+      message: error.message || 'Server error during login'
     });
   }
 };

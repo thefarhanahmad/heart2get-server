@@ -5,7 +5,6 @@ export const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check if token exists in headers
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')
@@ -14,8 +13,22 @@ export const protect = async (req, res, next) => {
         // Get token from header
         token = req.headers.authorization.split(' ')[1];
 
+        if (!token) {
+          return res.status(401).json({
+            status: false,
+            message: 'Not authorized, no token provided'
+          });
+        }
+
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (!decoded.id) {
+          return res.status(401).json({
+            status: false,
+            message: 'Invalid token format'
+          });
+        }
 
         // Get admin from token
         const admin = await Admin.findById(decoded.id).select('-password');
@@ -34,7 +47,7 @@ export const protect = async (req, res, next) => {
         console.error('Token verification error:', error);
         return res.status(401).json({
           status: false,
-          message: 'Not authorized, invalid token'
+          message: 'Not authorized, token expired or invalid'
         });
       }
     } else {

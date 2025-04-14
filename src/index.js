@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -15,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect('mongodb+srv://jeeturadicalloop:nAc62altcG8rE5Uy@cluster0.ytxc0x9.mongodb.net/')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
@@ -28,10 +29,22 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the API' });
 });
 
-// Error handling middleware
+// Global error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  res.status(500).json({
+    status: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Handle 404 routes
+app.use((req, res) => {
+  res.status(404).json({
+    status: false,
+    message: 'Route not found'
+  });
 });
 
 app.listen(PORT, () => {
