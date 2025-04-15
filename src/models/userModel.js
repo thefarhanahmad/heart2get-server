@@ -19,32 +19,64 @@ const userSchema = new mongoose.Schema({
     trim: true,
     unique: true
   },
-  gender: {
+  i_am: {
     type: String,
     enum: ['Male', 'Female', 'Other']
   },
-  location: {
+  interested_in: {
     type: String,
-    trim: true
+    enum: ['Male', 'Female', 'Both']
   },
   age: {
     type: Number,
     min: [18, 'Age must be at least 18'],
     max: [120, 'Age cannot exceed 120']
   },
+  about: {
+    type: String,
+    trim: true,
+    maxLength: [500, 'About section cannot exceed 500 characters']
+  },
+  likes: [{
+    type: String,
+    trim: true
+  }],
+  interests: [{
+    type: String,
+    trim: true
+  }],
+  hobbies: [{
+    type: String,
+    trim: true
+  }],
+  skin_color: {
+    type: String,
+    trim: true
+  },
+  height: {
+    type: Number,
+    min: [100, 'Height must be at least 100 cm'],
+    max: [250, 'Height cannot exceed 250 cm']
+  },
+  weight: {
+    type: Number,
+    min: [30, 'Weight must be at least 30 kg'],
+    max: [200, 'Weight cannot exceed 200 kg']
+  },
+  address: {
+    type: String,
+    trim: true
+  },
+  category: {
+    type: String,
+    enum: ['Casual Dating', 'Serious Relationship', 'Friendship'],
+    default: 'Casual Dating'
+  },
   subscription: {
     type: String,
     enum: ['free', 'premium'],
     default: 'free'
   },
-  about_us: {
-    type: String,
-    trim: true
-  },
-  interest: [{
-    type: String,
-    trim: true
-  }],
   status: {
     type: String,
     enum: ['active', 'inactive', 'banned'],

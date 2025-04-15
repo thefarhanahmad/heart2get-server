@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import User from '../models/userModel.js';
 import Admin from '../models/adminModel.js';
 
 export const protect = async (req, res, next) => {
@@ -17,27 +18,39 @@ export const protect = async (req, res, next) => {
     }
 
     try {
-      // Debug logs
-      console.log('Received token:', token);
-      
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('Decoded token:', decoded);
 
-      // Find admin by decoded token data
-      const admin = await Admin.findOne({
-        _id: decoded.id,
-        email: decoded.email,
-        role: decoded.role
-      }).select('-password');
+      // Check if the token contains role (admin token) or just id (user token)
+      if (decoded.role) {
+        // Admin authentication
+        const admin = await Admin.findOne({
+          _id: decoded.id,
+          email: decoded.email,
+          role: decoded.role
+        }).select('-password');
 
-      if (!admin) {
-        return res.status(401).json({
-          status: false,
-          message: 'Admin not found or unauthorized'
-        });
+        if (!admin) {
+          return res.status(401).json({
+            status: false,
+            message: 'Admin not found or unauthorized'
+          });
+        }
+
+        req.admin = admin;
+      } else {
+        // User authentication
+        const user = await User.findById(decoded.id).select('-otp -otpExpiry');
+
+        if (!user) {
+          return res.status(401).json({
+            status: false,
+            message: 'User not found or unauthorized'
+          });
+        }
+
+        req.user = user;
       }
 
-      req.admin = admin;
       next();
     } catch (error) {
       console.error('Token verification error:', error);
@@ -59,6 +72,62 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({
         status: false,
         message: 'Token validation failed'
+      });
+    }
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Server error in authentication'
+    });
+  }
+};
+
+export const protectAdmin = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        status: false,
+        message: 'Not authorized, no token provided'
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      if (!decoded.role) {
+        return res.status(401).json({
+          status: false,
+          message: 'Not authorized as admin'
+        });
+      }
+
+      const admin = await Admin.findOne({
+        _id: decoded.id,
+        email: decoded.email,
+        role: decoded.role
+      }).select('-password');
+
+      if (!admin) {
+        return res.status(401).json({
+          status: false,
+          message: 'Admin not found or unauthorized'
+        });
+      }
+
+      req.admin = admin;
+      next();
+    } catch (error) {
+      console.error('Token verification error:', error);
+      return res.status(401).json({
+        status: false,
+        message: 'Invalid or expired token'
       });
     }
   } catch (error) {

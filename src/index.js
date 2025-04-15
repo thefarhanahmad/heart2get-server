@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import adminRoutes from './routes/adminRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +24,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

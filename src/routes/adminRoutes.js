@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
+import { protectAdmin } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
 import {
   loginSchema,
@@ -20,7 +20,7 @@ router.post('/auth/login', validateRequest(loginSchema), authController.login);
 router.post('/auth/create', validateRequest(createAdminSchema), authController.createAdmin);
 
 // Protected routes (authentication required)
-router.use(protect); // Apply authentication middleware to all routes below
+router.use(protectAdmin); // Apply admin authentication middleware to all routes below
 
 // Dashboard routes
 router.get('/dashboard/stats', dashboardController.getDashboardStats);

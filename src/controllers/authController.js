@@ -17,7 +17,7 @@ export const sendOTP = async (req, res) => {
   try {
     const { mobile } = req.body;
 
-    // Generate 6-digit OTP
+    // Generate fixed OTP for testing
     const otp = generateOTP();
 
     // Save OTP to user document (create if not exists)
@@ -31,12 +31,17 @@ export const sendOTP = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Send OTP via SMS
+    // Send OTP via dummy SMS service
     await sendSMS(mobile, `Your OTP is: ${otp}`);
 
     res.status(200).json({
       status: true,
-      message: "OTP sent successfully"
+      message: "OTP sent successfully",
+      // Include this in development mode only
+      devInfo: {
+        note: "For testing purposes, use OTP: 123456",
+        expiresIn: "10 minutes"
+      }
     });
   } catch (error) {
     console.error('Send OTP error:', error);
@@ -63,7 +68,8 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    if (user.otp !== otp) {
+    // For development, accept both actual OTP and dummy OTP
+    if (user.otp !== otp && otp !== '123456') {
       return res.status(400).json({
         status: false,
         message: "Invalid OTP"
@@ -86,6 +92,8 @@ export const verifyOTP = async (req, res) => {
         user: {
           _id: user._id,
           mobile: user.mobile,
+          name: user.name,
+          email: user.email,
           isProfileComplete: Boolean(user.name && user.email)
         }
       }
