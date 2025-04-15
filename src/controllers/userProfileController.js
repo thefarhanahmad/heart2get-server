@@ -111,3 +111,77 @@ export const getMatches = async (req, res) => {
     });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const updateData = {};
+
+    // Handle text fields
+    const fields = [
+      'fullname', 'about', 'email', 'birthdate', 'genderPreference',
+      'height', 'weight', 'skin_color', 'address', 'category'
+    ];
+
+    fields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Map fullname to name in the database
+        const dbField = field === 'fullname' ? 'name' : field;
+        updateData[dbField] = req.body[field];
+      }
+    });
+
+    // Handle array fields
+    ['likes', 'interests', 'hobbies'].forEach(field => {
+      if (req.body[field]) {
+        updateData[field] = Array.isArray(req.body[field])
+          ? req.body[field]
+          : [req.body[field]];
+      }
+    });
+
+    // Handle file uploads
+    if (req.files) {
+      if (req.files.profile_image) {
+        updateData.profile_image = req.files.profile_image[0].path;
+      }
+      if (req.files.banner_image) {
+        updateData.banner_image = req.files.banner_image[0].path;
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        status: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      status: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updatedUser._id,
+        fullname: updatedUser.name,
+        profile_image: updatedUser.profile_image,
+        banner_image: updatedUser.banner_image,
+        about: updatedUser.about,
+        likes: updatedUser.likes,
+        interests: updatedUser.interests,
+        hobbies: updatedUser.hobbies,
+        category: updatedUser.category
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: false,
+      message: error.message
+    });
+  }
+};
