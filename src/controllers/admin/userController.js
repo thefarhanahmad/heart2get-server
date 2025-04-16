@@ -204,3 +204,82 @@ export const deleteUser = async (req, res) => {
     });
   }
 };
+
+export const updateUserStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!['active', 'inactive', 'banned'].includes(status)) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid status value"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      status: true,
+      message: "User status updated successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: error.message
+    });
+  }
+};
+
+export const getPremiumUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalPremiumUsers = await User.countDocuments({ subscription: 'premium' });
+    const totalPages = Math.ceil(totalPremiumUsers / limit);
+
+    const premiumUsers = await User.find({ subscription: 'premium' })
+      .select('name mobile category subscription status createdAt')
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const formattedUsers = premiumUsers.map(user => ({
+      id: user._id,
+      name: user.name,
+      mobile: user.mobile,
+      category: user.category,
+      isPremium: true,
+      status: user.status,
+      joined_at: user.createdAt
+    }));
+
+    res.status(200).json({
+      status: true,
+      message: "Premium users fetched successfully",
+      data: {
+        current_page: page,
+        total_pages: totalPages,
+        total_users: totalPremiumUsers,
+        users: formattedUsers
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: error.message
+    });
+  }
+};

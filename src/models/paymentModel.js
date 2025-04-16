@@ -1,25 +1,41 @@
 import mongoose from 'mongoose';
 
 const paymentSchema = new mongoose.Schema({
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  plan_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubscriptionPlan',
+    required: true
+  },
   amount: {
     type: Number,
     required: true,
     min: [0, 'Amount cannot be negative']
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  payment_method: {
+    type: String,
+    required: true,
+    enum: ['razorpay', 'stripe', 'paypal']
+  },
+  transaction_id: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  payment_response: {
+    type: Object
   },
   status: {
     type: String,
-    enum: ['success', 'failed', 'pending'],
+    enum: ['pending', 'success', 'failed'],
     default: 'pending'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

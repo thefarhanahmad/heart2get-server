@@ -1,14 +1,10 @@
 import mongoose from 'mongoose';
 
 const subscriptionPlanSchema = new mongoose.Schema({
-  plan_id: {
-    type: String,
-    required: true,
-    unique: true
-  },
   name: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   price: {
     type: Number,
@@ -21,13 +17,24 @@ const subscriptionPlanSchema = new mongoose.Schema({
     min: 1
   },
   features: [{
-    type: String
+    type: String,
+    trim: true
   }],
   status: {
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
+  },
+  isPopular: {
+    type: Boolean,
+    default: false
+  },
+  description: {
+    type: String,
+    trim: true
   }
+}, {
+  timestamps: true
 });
 
 const SubscriptionPlan = mongoose.model('SubscriptionPlan', subscriptionPlanSchema);

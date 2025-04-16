@@ -19,10 +19,19 @@ const adminSchema = new mongoose.Schema({
     required: [true, 'Password is required'],
     minLength: [6, 'Password must be at least 6 characters']
   },
+  mobile: {
+    type: String,
+    trim: true
+  },
   role: {
     type: String,
-    enum: ['admin', 'superadmin'],
+    enum: ['admin', 'moderator', 'supervisor'],
     default: 'admin'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
   },
   createdAt: {
     type: Date,

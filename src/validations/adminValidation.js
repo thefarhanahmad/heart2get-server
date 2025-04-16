@@ -9,7 +9,34 @@ export const createAdminSchema = Joi.object({
   name: Joi.string().min(2).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid('admin', 'superadmin').default('admin')
+  mobile: Joi.string().pattern(/^[0-9]{10}$/),
+  role: Joi.string().valid('admin', 'moderator', 'supervisor').default('admin')
+});
+
+export const updateAdminSchema = Joi.object({
+  name: Joi.string().min(2).max(50),
+  mobile: Joi.string().pattern(/^[0-9]{10}$/),
+  role: Joi.string().valid('admin', 'moderator', 'supervisor')
+}).min(1);
+
+export const updateAdminStatusSchema = Joi.object({
+  status: Joi.string()
+    .valid('active', 'inactive')
+    .required()
+    .messages({
+      'any.required': 'Status is required',
+      'any.only': 'Status must be either active or inactive'
+    })
+});
+
+export const assignRoleSchema = Joi.object({
+  role: Joi.string()
+    .valid('admin', 'moderator', 'supervisor')
+    .required()
+    .messages({
+      'any.required': 'Role is required',
+      'any.only': 'Invalid role specified'
+    })
 });
 
 export const createUserSchema = Joi.object({
@@ -38,3 +65,13 @@ export const updateUserSchema = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'banned'),
   profile_image: Joi.string().allow('')
 }).min(1);
+
+export const updateUserStatusSchema = Joi.object({
+  status: Joi.string()
+    .valid('active', 'inactive', 'banned')
+    .required()
+    .messages({
+      'any.required': 'Status is required',
+      'any.only': 'Status must be either active, inactive, or banned'
+    })
+});
