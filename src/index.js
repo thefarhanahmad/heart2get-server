@@ -5,6 +5,11 @@ import dotenv from 'dotenv';
 import adminRoutes from './routes/adminRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import interestRoutes from './routes/interestRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import storyRoutes from './routes/storyRoutes.js';
 import fs from 'fs';
 
 // Load environment variables
@@ -27,14 +32,14 @@ app.use('/uploads', express.static('uploads'));
 
 // MongoDB Connection with improved configuration
 mongoose.connect(process.env.MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-  family: 4 // Use IPv4, skip trying IPv6
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => {
     console.error('MongoDB connection error:', error);
-    process.exit(1); // Exit if unable to connect to database
+    process.exit(1);
   });
 
 // Handle MongoDB connection errors after initial connection
@@ -50,6 +55,11 @@ mongoose.connection.on('disconnected', () => {
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/interests', interestRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/story', storyRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -60,7 +70,6 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
 
-  // Handle Multer errors
   if (err.name === 'MulterError') {
     return res.status(400).json({
       status: false,

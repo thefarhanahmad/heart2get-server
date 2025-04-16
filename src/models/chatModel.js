@@ -1,24 +1,43 @@
 import mongoose from 'mongoose';
 
-const chatSchema = new mongoose.Schema({
-  participants: [{
+const messageSchema = new mongoose.Schema({
+  sender_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  receiver_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['text', 'image', 'audio', 'doc'],
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  },
+  file_url: {
+    type: String,
+    required: function() {
+      return ['image', 'audio', 'doc'].includes(this.type);
+    }
+  },
+  read: {
+    type: Boolean,
+    default: false
+  },
+  deleted_for: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }],
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastActivity: {
-    type: Date,
-    default: Date.now
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  }]
+}, {
+  timestamps: true
 });
 
-const Chat = mongoose.model('Chat', chatSchema);
+const Message = mongoose.model('Message', messageSchema);
 
-export default Chat;
+export default Message;
