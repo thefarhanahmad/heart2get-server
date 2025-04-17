@@ -55,6 +55,9 @@ const router = express.Router();
 // Auth Routes
 router.post('/auth/login', authController.login);
 
+// Default admin create Global route
+router.post('/create', adminController.createAdmin);
+
 // Admin Management
 router.post('/admins', protectAdmin, adminController.createAdmin);
 router.get('/admins', protectAdmin, adminController.getAllAdmins);
