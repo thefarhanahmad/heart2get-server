@@ -23,7 +23,7 @@ export const sendOTP = async (req, res) => {
     // Save OTP to user document (create if not exists)
     const user = await User.findOneAndUpdate(
       { mobile },
-      { 
+      {
         mobile,
         otp,
         otpExpiry: Date.now() + 10 * 60 * 1000 // 10 minutes
@@ -39,7 +39,7 @@ export const sendOTP = async (req, res) => {
       message: "OTP sent successfully",
       // Include this in development mode only
       devInfo: {
-        note: "For testing purposes, use OTP: 123456",
+        note: "For testing purposes, use OTP: 1234",
         expiresIn: "10 minutes"
       }
     });
@@ -69,7 +69,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     // For development, accept both actual OTP and dummy OTP
-    if (user.otp !== otp && otp !== '123456') {
+    if (user.otp !== otp && otp !== '1234') {
       return res.status(400).json({
         status: false,
         message: "Invalid OTP"
