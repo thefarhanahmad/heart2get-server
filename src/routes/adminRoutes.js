@@ -16,7 +16,10 @@ import * as subscriptionController from '../controllers/admin/subscriptionContro
 import * as dashboardController from '../controllers/admin/dashboardController.js';
 import * as profileController from '../controllers/admin/profileController.js';
 import * as activityLogController from '../controllers/admin/activityLogController.js';
-
+import * as bannedUserController from '../controllers/admin/bannedUserController.js';
+import * as analyticsController from '../controllers/admin/analyticsController.js';
+import * as emailTemplateController from '../controllers/admin/emailTemplateController.js';
+import { createTemplateSchema, updateTemplateSchema } from '../validations/emailTemplateValidation.js';
 import {
   createQuestionSchema,
   updateQuestionSchema,
@@ -104,15 +107,22 @@ router.delete('/payments/:payment_id', protectAdmin, paymentController.deletePay
 // Report Management
 router.get('/reports', protectAdmin, reportController.getAllReports);
 router.put('/reports/:reportId', protectAdmin, reportController.updateReportStatus);
-router.get('/users/banned', protectAdmin, reportController.getBannedUsers);
-router.put('/users/:user_id/ban', protectAdmin, reportController.banUser);
 
-// Interest Management
+
+// Interest Category Routes
+router.post('/interest-categories', protectAdmin, interestController.createCategory);
+router.get('/interest-categories', protectAdmin, interestController.getAllCategories);
+router.get('/interest-categories/:id', protectAdmin, interestController.getCategoryById);
+router.put('/interest-categories/:id', protectAdmin, interestController.updateCategory);
+router.delete('/interest-categories/:id', protectAdmin, interestController.deleteCategory);
+
+// Interest Routes
 router.post('/interests', protectAdmin, interestController.createInterest);
 router.get('/interests', protectAdmin, interestController.getAllInterests);
 router.get('/interests/:id', protectAdmin, interestController.getInterestById);
 router.put('/interests/:id', protectAdmin, interestController.updateInterest);
 router.delete('/interests/:id', protectAdmin, interestController.deleteInterest);
+
 
 // Subscription Management
 router.post('/subscriptions', protectAdmin, subscriptionController.createSubscriptionPlan);
@@ -137,5 +147,52 @@ router.post('/activity-logs', protectAdmin, activityLogController.createLog);
 router.delete('/activity-logs/all', protectAdmin, activityLogController.clearAllLogs); // Changed from /clear to /all
 router.delete('/activity-logs/:id', protectAdmin, activityLogController.deleteLog);
 
+
+// Banned User Management Routes
+router.get('/users/banned', protectAdmin, bannedUserController.getBannedUsers);
+router.put('/users/:user_id/ban', protectAdmin, bannedUserController.banUser);
+router.put('/users/:user_id/unban', protectAdmin, bannedUserController.unbanUser);
+router.patch('/users/:user_id/status', protectAdmin, bannedUserController.updateUserStatus);
+
+
+// Analytics Routes
+router.get('/recent-activities', protectAdmin, analyticsController.getRecentActivities);
+router.post('/user-growth-chart', protectAdmin, analyticsController.getUserGrowthChart);
+router.post('/revenue-chart', protectAdmin, analyticsController.getRevenueChart);
+
+
+
+// Email Template Routes
+router.post(
+  '/email-templates',
+  protectAdmin,
+  validateRequest(createTemplateSchema),
+  emailTemplateController.createTemplate
+);
+
+router.get(
+  '/email-templates',
+  protectAdmin,
+  emailTemplateController.getAllTemplates
+);
+
+router.get(
+  '/email-templates/:id',
+  protectAdmin,
+  emailTemplateController.getTemplateById
+);
+
+router.put(
+  '/email-templates/:id',
+  protectAdmin,
+  validateRequest(updateTemplateSchema),
+  emailTemplateController.updateTemplate
+);
+
+router.delete(
+  '/email-templates/:id',
+  protectAdmin,
+  emailTemplateController.deleteTemplate
+);
 
 export default router;

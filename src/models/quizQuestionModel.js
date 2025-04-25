@@ -34,6 +34,10 @@ const quizQuestionSchema = new mongoose.Schema({
         min: 1
     },
     options: [optionSchema],
+    required: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['active', 'inactive'],

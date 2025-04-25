@@ -10,7 +10,9 @@ export const createQuestionSchema = Joi.object({
             text: Joi.string().required(),
             is_correct: Joi.boolean().required()
         })
-    ).min(2).required()
+    ).min(2).required(),
+    status: Joi.string().valid('active', 'inactive').default('active'),
+    required: Joi.string().valid('true', 'false').default('true')
 });
 
 export const updateQuestionSchema = Joi.object({
@@ -23,15 +25,19 @@ export const updateQuestionSchema = Joi.object({
             text: Joi.string().required(),
             is_correct: Joi.boolean().required()
         })
-    ).min(2)
+    ).min(2),
+    status: Joi.string().valid('active', 'inactive'),
+    required: Joi.string().valid('true', 'false')
 }).min(1);
 
 export const createCategorySchema = Joi.object({
     name: Joi.string().required(),
-    description: Joi.string()
+    description: Joi.string(),
+    status: Joi.string().valid('active', 'inactive').default('active')
 });
 
 export const updateCategorySchema = Joi.object({
     name: Joi.string(),
-    description: Joi.string()
+    description: Joi.string(),
+    status: Joi.string().valid('active', 'inactive')
 }).min(1);

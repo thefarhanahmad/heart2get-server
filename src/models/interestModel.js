@@ -7,6 +7,16 @@ const interestSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  category_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'InterestCategory',
+    required: true
+  },
+  color: {
+    type: String,
+    default: '#000000',
+    trim: true
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],

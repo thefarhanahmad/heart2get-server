@@ -16,7 +16,8 @@ export const createQuestion = async (req, res) => {
                 type: question.type,
                 category_id: question.category_id,
                 points: question.points,
-                options: question.options
+                options: question.options,
+                required: question.required,
             }
         });
     } catch (error) {
@@ -33,6 +34,7 @@ export const getAllQuestions = async (req, res) => {
             .populate('category_id', 'name')
             .lean();
 
+        console.log('question list', questions);
         const formattedQuestions = questions.map(q => ({
             id: q._id,
             question: q.question,
@@ -42,7 +44,8 @@ export const getAllQuestions = async (req, res) => {
                 name: q.category_id.name
             },
             points: q.points,
-            options: q.options
+            options: q.options,
+            required: q.required,
         }));
 
         res.status(200).json({
@@ -81,7 +84,8 @@ export const getQuestionById = async (req, res) => {
                     name: question.category_id.name
                 },
                 points: question.points,
-                options: question.options
+                options: question.options,
+                required: question.required,
             }
         });
     } catch (error) {
@@ -173,7 +177,8 @@ export const getAllCategories = async (req, res) => {
             categories: categories.map(cat => ({
                 id: cat._id,
                 name: cat.name,
-                description: cat.description
+                description: cat.description,
+                status: cat.status
             }))
         });
     } catch (error) {

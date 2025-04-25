@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 
 export const createAdmin = async (req, res) => {
   try {
-    const admin = await Admin.create(req.body);
+    const { permissions, ...adminData } = req.body;
+
+    const admin = await Admin.create({
+      ...adminData,
+      permissions: permissions || {}
+    });
 
     res.status(201).json({
       status: true,
@@ -12,7 +17,8 @@ export const createAdmin = async (req, res) => {
         id: admin._id,
         name: admin.name,
         email: admin.email,
-        role: admin.role
+        role: admin.role,
+        permissions: admin.permissions
       }
     });
   } catch (error) {
@@ -34,6 +40,7 @@ export const getAllAdmins = async (req, res) => {
       name: admin.name,
       email: admin.email,
       role: admin.role,
+      permissions: admin.permissions,
       status: admin.status || 'active'
     }));
 
@@ -70,6 +77,7 @@ export const getAdminById = async (req, res) => {
         email: admin.email,
         mobile: admin.mobile,
         role: admin.role,
+        permissions: admin.permissions,
         status: admin.status || 'active'
       }
     });
@@ -98,7 +106,14 @@ export const updateAdmin = async (req, res) => {
 
     res.status(200).json({
       status: true,
-      message: "Admin updated successfully"
+      message: "Admin updated successfully",
+      data: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        permissions: admin.permissions
+      }
     });
   } catch (error) {
     res.status(400).json({
@@ -169,7 +184,7 @@ export const updateAdminStatus = async (req, res) => {
 
 export const assignRole = async (req, res) => {
   try {
-    const { role } = req.body;
+    const { role, permissions } = req.body;
 
     if (!['admin', 'moderator', 'supervisor'].includes(role)) {
       return res.status(400).json({
@@ -180,7 +195,10 @@ export const assignRole = async (req, res) => {
 
     const admin = await Admin.findByIdAndUpdate(
       req.params.id,
-      { role },
+      {
+        role,
+        ...(permissions && { permissions })
+      },
       { new: true }
     );
 
@@ -193,7 +211,7 @@ export const assignRole = async (req, res) => {
 
     res.status(200).json({
       status: true,
-      message: "Role assigned to admin"
+      message: "Role and permissions assigned to admin"
     });
   } catch (error) {
     res.status(500).json({

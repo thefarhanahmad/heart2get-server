@@ -10,7 +10,7 @@ export const getAllUsers = async (req, res) => {
     const totalPages = Math.ceil(totalUsers / limit);
 
     const users = await User.find()
-      .select('-__v')
+      .select('-password')
       .skip(skip)
       .limit(limit)
       .lean();
@@ -20,15 +20,21 @@ export const getAllUsers = async (req, res) => {
       name: user.name,
       email: user.email,
       mobile: user.mobile,
-      gender: user.gender,
-      location: user.location,
+      i_am: user.i_am,
+      interested_in: user.interested_in,
       age: user.age,
-      subscription: user.subscription,
-      about_us: user.about_us,
-      interest: user.interest,
-      status: user.status,
+      location: user.location,
+      about: user.about,
+      likes: user.likes || [],
+      interests: user.interests || [],
+      hobbies: user.hobbies || [],
+      skin_color: user.skin_color,
+      height: user.height,
+      weight: user.weight,
+      address: user.address,
+      category: user.category,
       profile_image: user.profile_image,
-      created_at: user.createdAt,
+      subscription: user.subscription,
       match_list: {
         matched_count: user.match_list?.matched_count || 0,
         matched_users: user.match_list?.matched_users || []
@@ -36,7 +42,9 @@ export const getAllUsers = async (req, res) => {
       report: {
         reported_count: user.report?.reported_count || 0,
         reports: user.report?.reports || []
-      }
+      },
+      status: user.status,
+      created_at: user.createdAt
     }));
 
     res.status(200).json({
@@ -59,7 +67,9 @@ export const getAllUsers = async (req, res) => {
 
 export const getSingleUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).lean();
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .lean();
 
     if (!user) {
       return res.status(404).json({
@@ -73,15 +83,21 @@ export const getSingleUser = async (req, res) => {
       name: user.name,
       email: user.email,
       mobile: user.mobile,
-      gender: user.gender,
-      location: user.location,
+      i_am: user.i_am,
+      interested_in: user.interested_in,
       age: user.age,
-      subscription: user.subscription,
-      about_us: user.about_us,
-      interest: user.interest,
-      status: user.status,
+      location: user.location,
+      about: user.about,
+      likes: user.likes || [],
+      interests: user.interests || [],
+      hobbies: user.hobbies || [],
+      skin_color: user.skin_color,
+      height: user.height,
+      weight: user.weight,
+      address: user.address,
+      category: user.category,
       profile_image: user.profile_image,
-      created_at: user.createdAt,
+      subscription: user.subscription,
       match_list: {
         matched_count: user.match_list?.matched_count || 0,
         matched_users: user.match_list?.matched_users || []
@@ -89,7 +105,9 @@ export const getSingleUser = async (req, res) => {
       report: {
         reported_count: user.report?.reported_count || 0,
         reports: user.report?.reports || []
-      }
+      },
+      status: user.status,
+      created_at: user.createdAt
     };
 
     res.status(200).json({
@@ -136,7 +154,7 @@ export const updateUser = async (req, res) => {
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    ).lean();
+    ).select('-password');
 
     if (!user) {
       return res.status(404).json({
@@ -150,23 +168,23 @@ export const updateUser = async (req, res) => {
       name: user.name,
       email: user.email,
       mobile: user.mobile,
-      gender: user.gender,
-      location: user.location,
+      i_am: user.i_am,
+      interested_in: user.interested_in,
       age: user.age,
-      subscription: user.subscription,
-      about_us: user.about_us,
-      interest: user.interest,
-      status: user.status,
+      location: user.location,
+      about: user.about,
+      likes: user.likes || [],
+      interests: user.interests || [],
+      hobbies: user.hobbies || [],
+      skin_color: user.skin_color,
+      height: user.height,
+      weight: user.weight,
+      address: user.address,
+      category: user.category,
       profile_image: user.profile_image,
-      created_at: user.createdAt,
-      match_list: {
-        matched_count: user.match_list?.matched_count || 0,
-        matched_users: user.match_list?.matched_users || []
-      },
-      report: {
-        reported_count: user.report?.reported_count || 0,
-        reports: user.report?.reports || []
-      }
+      subscription: user.subscription,
+      status: user.status,
+      updated_at: user.updatedAt
     };
 
     res.status(200).json({
@@ -208,7 +226,7 @@ export const deleteUser = async (req, res) => {
 export const updateUserStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     if (!['active', 'inactive', 'banned'].includes(status)) {
       return res.status(400).json({
         status: false,
@@ -220,7 +238,7 @@ export const updateUserStatus = async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    ).lean();
+    ).select('-password');
 
     if (!user) {
       return res.status(404).json({

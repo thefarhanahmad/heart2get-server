@@ -1,36 +1,88 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+
+const matchedUserSchema = new mongoose.Schema({
+  id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  }
+}, { _id: false });
+
+const reportSchema = new mongoose.Schema({
+  by: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  reason: {
+    type: String,
+    required: true
+  },
+  created_at: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
+    required: [true, 'Name is required'],
     trim: true,
     minLength: [2, 'Name must be at least 2 characters'],
     maxLength: [50, 'Name cannot exceed 50 characters']
   },
   email: {
     type: String,
+    required: [true, 'Email is required'],
+    unique: true,
     trim: true,
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minLength: [6, 'Password must be at least 6 characters']
   },
   mobile: {
     type: String,
     required: [true, 'Mobile number is required'],
     trim: true,
-    unique: true
+    unique: true,
+    match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid mobile number']
   },
   i_am: {
     type: String,
-    enum: ['Male', 'Female', 'Other']
+    required: [true, 'Gender is required'],
+    enum: {
+      values: ['Male', 'Female', 'Other'],
+      message: 'Gender must be either Male, Female, or Other'
+    }
   },
   interested_in: {
     type: String,
-    enum: ['Male', 'Female', 'Both']
+    required: [true, 'Interest preference is required'],
+    enum: {
+      values: ['Male', 'Female', 'Both'],
+      message: 'Interest must be either Male, Female, or Both'
+    }
   },
   age: {
     type: Number,
+    required: [true, 'Age is required'],
     min: [18, 'Age must be at least 18'],
     max: [120, 'Age cannot exceed 120']
+  },
+  location: {
+    type: String,
+    required: [true, 'Location is required'],
+    trim: true
   },
   about: {
     type: String,
@@ -42,8 +94,8 @@ const userSchema = new mongoose.Schema({
     trim: true
   }],
   interests: [{
-    type: String,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Interest'
   }],
   hobbies: [{
     type: String,
@@ -69,7 +121,10 @@ const userSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Casual Dating', 'Serious Relationship', 'Friendship'],
+    enum: {
+      values: ['Casual Dating', 'Serious Relationship', 'Friendship'],
+      message: 'Invalid category selected'
+    },
     default: 'Casual Dating'
   },
   subscription: {
@@ -86,50 +141,35 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  otp: {
-    type: String
-  },
-  otpExpiry: {
-    type: Date
-  },
   match_list: {
     matched_count: {
       type: Number,
       default: 0
     },
-    matched_users: [{
-      id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
-      name: String
-    }]
+    matched_users: [matchedUserSchema]
   },
   report: {
     reported_count: {
       type: Number,
       default: 0
     },
-    reports: [{
-      by: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
-      reason: {
-        type: String,
-        required: true
-      },
-      created_at: {
-        type: Date,
-        default: Date.now
-      }
-    }]
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    reports: [reportSchema]
   }
+}, {
+  timestamps: true
 });
+
+// Hash password before saving
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+// Method to check password
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 const User = mongoose.model('User', userSchema);
 
