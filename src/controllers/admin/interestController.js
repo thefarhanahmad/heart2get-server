@@ -180,10 +180,12 @@ export const getAllInterests = async (req, res) => {
                 id: interest._id,
                 name: interest.name,
                 color: interest.color,
-                category: {
-                    id: interest.category_id._id,
-                    name: interest.category_id.name
-                },
+                category: interest.category_id
+                    ? {
+                        id: interest.category_id._id,
+                        name: interest.category_id.name
+                    }
+                    : null, // <- safely handle missing category
                 status: interest.status
             }))
         });

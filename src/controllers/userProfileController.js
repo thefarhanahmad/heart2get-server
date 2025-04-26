@@ -4,7 +4,7 @@ export const setupProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const profileData = {
-      name: req.body.fullname,
+      name: req.body.name,
       email: req.body.email,
       i_am: req.body.i_am,
       interested_in: req.body.interested_in,
@@ -39,7 +39,7 @@ export const setupProfile = async (req, res) => {
       profile: {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
-        fullname: updatedUser.name,
+        name: updatedUser.name,
         age: updatedUser.age,
         about: updatedUser.about,
         likes: updatedUser.likes,
@@ -119,14 +119,14 @@ export const updateProfile = async (req, res) => {
 
     // Handle text fields
     const fields = [
-      'fullname', 'about', 'email', 'birthdate', 'genderPreference',
+      'name', 'about', 'email', 'birthdate', 'genderPreference',
       'height', 'weight', 'skin_color', 'address', 'category'
     ];
 
     fields.forEach(field => {
       if (req.body[field] !== undefined) {
         // Map fullname to name in the database
-        const dbField = field === 'fullname' ? 'name' : field;
+        const dbField = field === 'name' ? 'name' : field;
         updateData[dbField] = req.body[field];
       }
     });
@@ -168,7 +168,7 @@ export const updateProfile = async (req, res) => {
       message: 'Profile updated successfully',
       data: {
         id: updatedUser._id,
-        fullname: updatedUser.name,
+        name: updatedUser.name,
         profile_image: updatedUser.profile_image,
         banner_image: updatedUser.banner_image,
         about: updatedUser.about,
