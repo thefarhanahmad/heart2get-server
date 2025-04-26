@@ -32,6 +32,7 @@ export const getProfile = async (req, res) => {
         weight: user.weight,
         address: user.address,
         subscription: user.subscription,
+        genderPreference: user.interested_in,
         status: user.status
       }
     });
