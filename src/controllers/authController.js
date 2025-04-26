@@ -19,7 +19,7 @@ export const sendOTP = async (req, res) => {
 
     // Generate fixed OTP for testing
     const otp = generateOTP();
-
+    console.log('otp is a', otp);
     // Save OTP to user document (create if not exists)
     const user = await User.findOneAndUpdate(
       { mobile },
@@ -76,7 +76,7 @@ export const verifyOTP = async (req, res) => {
     // Clear OTP after successful verification
     user.otp = undefined;
     user.otpExpiry = undefined;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     // Generate JWT token
     const token = generateToken(user);
@@ -89,9 +89,9 @@ export const verifyOTP = async (req, res) => {
         user: {
           _id: user._id,
           mobile: user.mobile,
-          name: user.name,
-          email: user.email,
-          isProfileComplete: Boolean(user.name && user.email)
+          name: user.name || '',
+          email: user.email || '',
+          isProfileComplete: Boolean(user.name && user.email && user.age && user.i_am && user.interested_in)
         }
       }
     });
