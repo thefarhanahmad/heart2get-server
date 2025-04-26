@@ -5,11 +5,11 @@ const matchedUserSchema = new mongoose.Schema({
   id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: false
+    required: true
   },
   name: {
     type: String,
-    required: false
+    required: true
   }
 }, { _id: false });
 
@@ -17,11 +17,11 @@ const reportSchema = new mongoose.Schema({
   by: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: false
+    required: true
   },
   reason: {
     type: String,
-    required: false
+    required: true
   },
   created_at: {
     type: Date,
@@ -29,17 +29,37 @@ const reportSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const addressSchema = new mongoose.Schema({
+  country: {
+    type: String,
+    required: [true, 'Country is required']
+  },
+  state: {
+    type: String,
+    required: [true, 'State is required']
+  },
+  city: {
+    type: String,
+    required: [true, 'City is required']
+  },
+  pincode: {
+    type: String,
+    required: [true, 'Pincode is required']
+  },
+  locality: String
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [false, 'Name is required'],
+    required: [true, 'Name is required'],
     trim: true,
     minLength: [2, 'Name must be at least 2 characters'],
     maxLength: [50, 'Name cannot exceed 50 characters']
   },
   email: {
     type: String,
-    required: [false, 'Email is required'],
+    required: [true, 'Email is required'],
     unique: true,
     trim: true,
     lowercase: true,
@@ -47,19 +67,19 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [false, 'Password is required'],
+    required: [true, 'Password is required'],
     minLength: [6, 'Password must be at least 6 characters']
   },
   mobile: {
     type: String,
-    required: [false, 'Mobile number is required'],
+    required: [true, 'Mobile number is required'],
     trim: true,
     unique: true,
     match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid mobile number']
   },
   i_am: {
     type: String,
-    required: [false, 'Gender is required'],
+    required: [true, 'Gender is required'],
     enum: {
       values: ['Male', 'Female', 'Other'],
       message: 'Gender must be either Male, Female, or Other'
@@ -67,7 +87,7 @@ const userSchema = new mongoose.Schema({
   },
   interested_in: {
     type: String,
-    required: [false, 'Interest preference is required'],
+    required: [true, 'Interest preference is required'],
     enum: {
       values: ['Male', 'Female', 'Both'],
       message: 'Interest must be either Male, Female, or Both'
@@ -75,14 +95,9 @@ const userSchema = new mongoose.Schema({
   },
   age: {
     type: Number,
-    required: [false, 'Age is required'],
+    required: [true, 'Age is required'],
     min: [18, 'Age must be at least 18'],
     max: [120, 'Age cannot exceed 120']
-  },
-  location: {
-    type: String,
-    required: [false, 'Location is required'],
-    trim: true
   },
   about: {
     type: String,
@@ -115,9 +130,15 @@ const userSchema = new mongoose.Schema({
     min: [30, 'Weight must be at least 30 kg'],
     max: [200, 'Weight cannot exceed 200 kg']
   },
-  address: {
+  address: addressSchema,
+  profession: {
     type: String,
     trim: true
+  },
+  marital_status: {
+    type: String,
+    enum: ['married', 'unmarried', 'widow', null],
+    default: null
   },
   category: {
     type: String,
@@ -138,6 +159,10 @@ const userSchema = new mongoose.Schema({
     default: 'active'
   },
   profile_image: {
+    type: String,
+    trim: true
+  },
+  cover_image: {
     type: String,
     trim: true
   },

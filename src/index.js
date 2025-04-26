@@ -10,6 +10,7 @@ import interestRoutes from './routes/interestRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import storyRoutes from './routes/storyRoutes.js';
+import locationRoutes from './routes/locationRoutes.js';
 import fs from 'fs';
 
 // Load environment variables
@@ -60,6 +61,7 @@ app.use('/api/interests', interestRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/story', storyRoutes);
+app.use('/api/location', locationRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

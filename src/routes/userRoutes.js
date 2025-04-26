@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { protect } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
-import { profileSchema, updateProfileSchema } from '../validations/userValidation.js';
+import { createUserSchema, updateUserSchema } from '../validations/userValidation.js';
 import {
   getUsers,
   getUser,
@@ -47,13 +47,13 @@ const upload = multer({
 router.use(protect);
 
 // Profile routes
-router.post('/profile/setup', validateRequest(profileSchema), setupProfile);
+router.post('/profile/setup', validateRequest(createUserSchema), setupProfile);
 router.put('/profile/update',
   upload.fields([
     { name: 'profile_image', maxCount: 1 },
     { name: 'banner_image', maxCount: 1 }
   ]),
-  validateRequest(updateProfileSchema),
+  validateRequest(updateUserSchema),
   updateProfile
 );
 router.get('/matches', getMatches);
