@@ -33,13 +33,6 @@ export const createUserSchema = Joi.object({
       'string.email': 'Please enter a valid email',
       'any.required': 'Email is required'
     }),
-  password: Joi.string()
-    .required()
-    .min(6)
-    .messages({
-      'string.min': 'Password must be at least 6 characters',
-      'any.required': 'Password is required'
-    }),
   mobile: Joi.string()
     .required()
     .pattern(/^\+?[1-9]\d{1,14}$/)
