@@ -56,18 +56,15 @@ export const verifyOTP = async (req, res) => {
   try {
     const { mobile, otp } = req.body;
 
-    const user = await User.findOne({
-      mobile,
-      otpExpiry: { $gt: Date.now() }
-    });
+    const user = await User.findOne({ mobile });
+    console.log('user', user);
 
-    if (!user) {
+    if (!user || user.otpExpiry < Date.now()) {
       return res.status(400).json({
         status: false,
         message: "OTP expired or invalid mobile number"
       });
     }
-
     // For development, accept both actual OTP and dummy OTP
     if (user.otp !== otp && otp !== '1234') {
       return res.status(400).json({

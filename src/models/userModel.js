@@ -5,11 +5,11 @@ const matchedUserSchema = new mongoose.Schema({
   id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   name: {
     type: String,
-    required: true
+    required: false
   }
 }, { _id: false });
 
@@ -17,11 +17,11 @@ const reportSchema = new mongoose.Schema({
   by: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   reason: {
     type: String,
-    required: true
+    required: false
   },
   created_at: {
     type: Date,
@@ -32,14 +32,14 @@ const reportSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Name is required'],
+    required: [false, 'Name is required'],
     trim: true,
     minLength: [2, 'Name must be at least 2 characters'],
     maxLength: [50, 'Name cannot exceed 50 characters']
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: [false, 'Email is required'],
     unique: true,
     trim: true,
     lowercase: true,
@@ -47,19 +47,19 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: [false, 'Password is required'],
     minLength: [6, 'Password must be at least 6 characters']
   },
   mobile: {
     type: String,
-    required: [true, 'Mobile number is required'],
+    required: [false, 'Mobile number is required'],
     trim: true,
     unique: true,
     match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid mobile number']
   },
   i_am: {
     type: String,
-    required: [true, 'Gender is required'],
+    required: [false, 'Gender is required'],
     enum: {
       values: ['Male', 'Female', 'Other'],
       message: 'Gender must be either Male, Female, or Other'
@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema({
   },
   interested_in: {
     type: String,
-    required: [true, 'Interest preference is required'],
+    required: [false, 'Interest preference is required'],
     enum: {
       values: ['Male', 'Female', 'Both'],
       message: 'Interest must be either Male, Female, or Both'
@@ -75,13 +75,13 @@ const userSchema = new mongoose.Schema({
   },
   age: {
     type: Number,
-    required: [true, 'Age is required'],
+    required: [false, 'Age is required'],
     min: [18, 'Age must be at least 18'],
     max: [120, 'Age cannot exceed 120']
   },
   location: {
     type: String,
-    required: [true, 'Location is required'],
+    required: [false, 'Location is required'],
     trim: true
   },
   about: {
