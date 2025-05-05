@@ -27,8 +27,7 @@ const emailTemplateSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['html', 'text'],
-        default: 'html'
+        required: true,
     },
     description: {
         type: String,
@@ -41,8 +40,8 @@ const emailTemplateSchema = new mongoose.Schema({
     variables: [variableSchema],
     status: {
         type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+        enum: ['true', 'false'],
+        default: 'true'
     }
 }, {
     timestamps: true

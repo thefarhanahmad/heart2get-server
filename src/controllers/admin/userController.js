@@ -1,4 +1,10 @@
+import mongoose from 'mongoose';
 import User from '../../models/userModel.js';
+import { createUserSchema } from '../../validations/userValidation.js';
+
+import fs from 'fs';
+import path from 'path';
+
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -32,8 +38,10 @@ export const getAllUsers = async (req, res) => {
       height: user.height,
       weight: user.weight,
       address: user.address,
+      marital_status: user?.marital_status || '',
       category: user.category,
-      profile_image: user.profile_image,
+      profile_image: user.profile_image || '',
+      cover_image: user.cover_image || '',
       subscription: user.subscription,
       match_list: {
         matched_count: user.match_list?.matched_count || 0,
@@ -92,11 +100,13 @@ export const getSingleUser = async (req, res) => {
       interests: user.interests || [],
       hobbies: user.hobbies || [],
       skin_color: user.skin_color,
+      marital_status: user?.marital_status || '',
       height: user.height,
       weight: user.weight,
       address: user.address,
       category: user.category,
-      profile_image: user.profile_image,
+      profile_image: user.profile_image || '',
+      cover_image: user.cover_image || '',
       subscription: user.subscription,
       match_list: {
         matched_count: user.match_list?.matched_count || 0,
@@ -123,39 +133,93 @@ export const getSingleUser = async (req, res) => {
   }
 };
 
-export const createUser = async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-
-    res.status(201).json({
-      status: true,
-      message: "User created successfully",
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        mobile: user.mobile,
-        profile_image: user.profile_image,
-        status: user.status,
-        created_at: user.createdAt
-      }
-    });
-  } catch (error) {
-    res.status(400).json({
-      status: false,
-      message: error.message
-    });
+const createFolderIfNotExists = (folderPath) => {
+  if (!fs.existsSync(folderPath)) {
+    console.log(`Creating folder: ${folderPath}`);
+    fs.mkdirSync(folderPath, { recursive: true });
   }
 };
 
+export const createUser = async (req, res) => {
+  try {
+    console.log('📦 req.body create user:', req.body);  // form fields
+    console.log('🖼️ req.files:', req.files);  // file details
+
+    // Create user without images first
+    const user = await User.create({
+      ...req.body,
+      profile_image: '',
+      cover_image: '',
+    });
+
+    const userId = user._id;
+    const userBasePath = path.join(process.cwd(), 'uploads', 'users', String(userId));  // Directory for user uploads
+
+    // Ensure the user's base folder exists
+    createFolderIfNotExists(userBasePath);
+
+    let profileImagePath = '';
+    let coverImagePath = '';
+
+    if (req.files) {
+      // Profile Image Handling
+      if (req.files['profile_image']) {
+        const profileImageFile = req.files['profile_image'][0];
+        const profileFolder = path.join(userBasePath, 'profile');
+        createFolderIfNotExists(profileFolder);  // Ensure profile folder exists
+        console.log('Profile image file exists:', fs.existsSync(profileImageFile.path));  // Debugging check
+        const cleanFileName = path.basename(profileImageFile.originalname).replace(/\s+/g, '_');
+        const finalPath = path.join(profileFolder, cleanFileName);
+        fs.renameSync(profileImageFile.path, finalPath);
+        // Save full relative path in DB
+        profileImagePath = path.join(userBasePath, 'profile', cleanFileName).replace(/\\/g, '/');
+
+      }
+      // Cover Image Handling
+      if (req.files['cover_image']) {
+        const coverImageFile = req.files['cover_image'][0];
+        const coverFolder = path.join(userBasePath, 'cover');
+        createFolderIfNotExists(coverFolder);  // Ensure cover folder exists
+
+        console.log('Cover image file exists:', fs.existsSync(coverImageFile.path));  // Debugging check
+
+        const cleanFileName = path.basename(coverImageFile.originalname).replace(/\s+/g, '_');
+        const finalPath = path.join(coverFolder, cleanFileName);
+        fs.renameSync(coverImageFile.path, finalPath);
+
+        coverImagePath = path.join(userBasePath, 'cover', cleanFileName).replace(/\\/g, '/');
+
+      }
+      // Update user with image paths
+      await User.findByIdAndUpdate(userId, {
+        profile_image: profileImagePath,
+        cover_image: coverImagePath,
+      });
+    }
+    const updatedUser = await User.findById(userId);
+    res.status(201).json({
+      status: true,
+      message: 'User created successfully',
+      data: updatedUser,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({
+      status: false,
+      message: error.message,
+    });
+  }
+};
 export const updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).select('-password');
+    console.log('📦 req.bodyss:', req.body);  // form fields
+    console.log('🖼️ req.filessss:', req.files);  // file details
 
+    const userId = req.params.id;
+
+    // Find user by ID
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         status: false,
@@ -163,28 +227,96 @@ export const updateUser = async (req, res) => {
       });
     }
 
+    // Check if mobile is already taken by another user
+    if (req.body.mobile && req.body.mobile !== user.mobile) {
+      const existingMobile = await User.findOne({
+        mobile: req.body.mobile,
+        _id: { $ne: userId }  // Exclude the current user
+      });
+      if (existingMobile) {
+        return res.status(400).json({
+          status: false,
+          message: "Mobile number is already in use"
+        });
+      }
+    }
+
+    // Check if email is already taken by another user
+    if (req.body.email && req.body.email !== user.email) {
+      const existingEmail = await User.findOne({
+        email: req.body.email,
+        _id: { $ne: userId }  // Exclude the current user
+      });
+      if (existingEmail) {
+        return res.status(400).json({
+          status: false,
+          message: "Email address is already in use"
+        });
+      }
+    }
+
+    const userBasePath = path.join('uploads', 'users', userId);
+    const absoluteUserBasePath = path.join(process.cwd(), userBasePath);
+    createFolderIfNotExists(absoluteUserBasePath);
+
+    // Handle profile image update
+    if (req.files?.['profile_image']) {
+      const file = req.files['profile_image'][0];
+      const profileFolder = path.join(absoluteUserBasePath, 'profile');
+      createFolderIfNotExists(profileFolder);
+
+      const cleanFileName = path.basename(file.originalname).replace(/\s+/g, '_');
+      const finalPath = path.join(profileFolder, cleanFileName);
+
+      fs.renameSync(file.path, finalPath);
+
+      // Set relative DB path
+      req.body.profile_image = path.join(userBasePath, 'profile', cleanFileName).replace(/\\/g, '/');
+    }
+
+    // Optional: Handle cover image update
+    if (req.files?.['cover_image']) {
+      const file = req.files['cover_image'][0];
+      const coverFolder = path.join(absoluteUserBasePath, 'cover');
+      createFolderIfNotExists(coverFolder);
+
+      const cleanFileName = path.basename(file.originalname).replace(/\s+/g, '_');
+      const finalPath = path.join(coverFolder, cleanFileName);
+
+      fs.renameSync(file.path, finalPath);
+
+      req.body.cover_image = path.join(userBasePath, 'cover', cleanFileName).replace(/\\/g, '/');
+    }
+
+    // Update user information in database
+    const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
+      new: true,
+      runValidators: true
+    }).select('-password');
+
     const formattedUser = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      mobile: user.mobile,
-      i_am: user.i_am,
-      interested_in: user.interested_in,
-      age: user.age,
-      location: user.location,
-      about: user.about,
-      likes: user.likes || [],
-      interests: user.interests || [],
-      hobbies: user.hobbies || [],
-      skin_color: user.skin_color,
-      height: user.height,
-      weight: user.weight,
-      address: user.address,
-      category: user.category,
-      profile_image: user.profile_image,
-      subscription: user.subscription,
-      status: user.status,
-      updated_at: user.updatedAt
+      id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      mobile: updatedUser.mobile,
+      i_am: updatedUser.i_am,
+      interested_in: updatedUser.interested_in,
+      age: updatedUser.age,
+      location: updatedUser.location,
+      about: updatedUser.about,
+      likes: updatedUser.likes || [],
+      interests: updatedUser.interests || [],
+      hobbies: updatedUser.hobbies || [],
+      skin_color: updatedUser.skin_color,
+      height: updatedUser.height,
+      weight: updatedUser.weight,
+      address: updatedUser.address,
+      category: updatedUser.category,
+      profile_image: updatedUser.profile_image,
+      cover_image: updatedUser.cover_image,
+      subscription: updatedUser.subscription,
+      status: updatedUser.status,
+      updated_at: updatedUser.updatedAt
     };
 
     res.status(200).json({
@@ -192,14 +324,15 @@ export const updateUser = async (req, res) => {
       message: "User updated successfully",
       data: formattedUser
     });
+
   } catch (error) {
+    console.error('Update error:', error);
     res.status(400).json({
       status: false,
       message: error.message
     });
   }
 };
-
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);

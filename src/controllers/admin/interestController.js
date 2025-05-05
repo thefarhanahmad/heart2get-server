@@ -33,6 +33,7 @@ export const getAllCategories = async (req, res) => {
             categories: categories.map(category => ({
                 id: category._id,
                 name: category.name,
+                description: category.description,
                 status: category.status
             }))
         });

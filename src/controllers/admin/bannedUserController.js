@@ -2,6 +2,8 @@ import BannedUser from '../../models/bannedUserModel.js';
 import User from '../../models/userModel.js';
 
 export const getBannedUsers = async (req, res) => {
+
+    console.log('banned yser---------------')
     try {
         const page = parseInt(req.query.page) || 1;
         const per_page = parseInt(req.query.per_page) || 10;
@@ -16,7 +18,7 @@ export const getBannedUsers = async (req, res) => {
             .lean();
 
         console.log('banned yser', bannedUsers)
-
+        // return false;
         const total = await BannedUser.countDocuments({ unbanned: false });
 
         res.status(200).json({
@@ -55,6 +57,7 @@ export const getBannedUsers = async (req, res) => {
 };
 
 export const banUser = async (req, res) => {
+    console.log('banned yser---------------')
     try {
         const { reason, duration = 0 } = req.body;
         const userId = req.params.user_id;

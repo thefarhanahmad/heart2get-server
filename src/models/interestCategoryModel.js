@@ -7,6 +7,10 @@ const interestCategorySchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
+    description: {
+        required: true,
+        type: String
+    },
     color: {
         type: String,
         default: '#000000',

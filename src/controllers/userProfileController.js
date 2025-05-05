@@ -1,10 +1,10 @@
-import User from '../models/userModel.js';
+import User from "../models/userModel.js";
 
 export const setupProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const profileData = {
-      name: req.body.name,
+      name: req.body.fullname,
       email: req.body.email,
       i_am: req.body.i_am,
       interested_in: req.body.interested_in,
@@ -17,29 +17,28 @@ export const setupProfile = async (req, res) => {
       height: req.body.height,
       weight: req.body.weight,
       address: req.body.address,
-      category: req.body.category
+      category: req.body.category,
     };
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      profileData,
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, profileData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedUser) {
       return res.status(404).json({
         status: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       status: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       profile: {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
-        name: updatedUser.name,
+        fullname: updatedUser.name,
         age: updatedUser.age,
         about: updatedUser.about,
         likes: updatedUser.likes,
@@ -50,27 +49,34 @@ export const setupProfile = async (req, res) => {
         weight: updatedUser.weight,
         category: updatedUser.category,
         email: updatedUser.email,
-        address: updatedUser.address
-      }
+        address: updatedUser.address,
+      },
     });
   } catch (error) {
     res.status(400).json({
       status: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
 
 export const getMatches = async (req, res) => {
   try {
-    const { category, age_min, age_max, city } = req.query;
+    const { category, age_min, age_max, city } = req.query; // <-- city liya hai
     const user = await User.findById(req.user.id);
 
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
     const query = {
-      _id: { $ne: req.user.id },
-      status: 'active',
-      i_am: user.interested_in,
-      interested_in: user.i_am
+      _id: { $ne: req.user.id }, // apne aap ko exclude
+      status: "active",
+      i_am:
+        user.interested_in === "Both"
+          ? { $in: ["Male", "Female", "Other"] }
+          : user.interested_in,
+      interested_in: { $in: [user.i_am, "Both"] },
     };
 
     if (category) {
@@ -82,32 +88,34 @@ export const getMatches = async (req, res) => {
     }
 
     if (city) {
-      query.address = new RegExp(city, 'i');
+      query["address.city"] = new RegExp(city, "i"); // <-- case insensitive city search
     }
 
     const matches = await User.find(query)
-      .select('name age address profile_image about category')
+      .select("name age address profile_image about category")
       .limit(20)
       .lean();
 
-    const formattedMatches = matches.map(match => ({
+    const formattedMatches = matches.map((match) => ({
       id: match._id,
       name: match.name,
       age: match.age,
-      city: match.address,
+      country: match.address?.country || "",
+      city: match.address?.city || "",
       profile_image: match.profile_image,
       about: match.about,
-      category: match.category
+      category: match.category,
     }));
 
     res.status(200).json({
       status: true,
-      matches: formattedMatches
+      matches: formattedMatches,
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({
       status: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -117,71 +125,121 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const updateData = {};
 
-    // Handle text fields
+    // Fields that should be parsed from the request body directly
+    const jsonFields = ["likes", "interests", "hobbies", "address"];
+
+    jsonFields.forEach((key) => {
+      if (req.body[key]) {
+        updateData[key] = req.body[key]; // No need for JSON.parse
+      }
+    });
+
+    // Handle all other plain fields
     const fields = [
-      'name', 'about', 'email', 'birthdate', 'genderPreference',
-      'height', 'weight', 'skin_color', 'address', 'category'
+      "name",
+      "email",
+      "mobile",
+      "i_am",
+      "interested_in",
+      "age",
+      "about",
+      "skin_color",
+      "height",
+      "weight",
+      "profession",
+      "marital_status",
+      "category",
+      "subscription",
+      "status",
     ];
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       if (req.body[field] !== undefined) {
-        // Map fullname to name in the database
-        const dbField = field === 'name' ? 'name' : field;
-        updateData[dbField] = req.body[field];
+        updateData[field] = req.body[field];
       }
     });
 
-    // Handle array fields
-    ['likes', 'interests', 'hobbies'].forEach(field => {
-      if (req.body[field]) {
-        updateData[field] = Array.isArray(req.body[field])
-          ? req.body[field]
-          : [req.body[field]];
-      }
-    });
+    console.log("req files to update profile image : ", req.files);
 
-    // Handle file uploads
+    // Handle file uploads if any
     if (req.files) {
-      if (req.files.profile_image) {
+      if (req.files.profile_image && req.files.profile_image[0]) {
         updateData.profile_image = req.files.profile_image[0].path;
       }
-      if (req.files.banner_image) {
-        updateData.banner_image = req.files.banner_image[0].path;
+      if (req.files.banner_image && req.files.banner_image[0]) {
+        updateData.cover_image = req.files.banner_image[0].path; // note: cover_image instead of banner_image in model
       }
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedUser) {
       return res.status(404).json({
         status: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       status: true,
-      message: 'Profile updated successfully',
-      data: {
-        id: updatedUser._id,
-        name: updatedUser.name,
-        profile_image: updatedUser.profile_image,
-        banner_image: updatedUser.banner_image,
-        about: updatedUser.about,
-        likes: updatedUser.likes,
-        interests: updatedUser.interests,
-        hobbies: updatedUser.hobbies,
-        category: updatedUser.category
-      }
+      message: "Profile updated successfully",
+      data: updatedUser,
     });
   } catch (error) {
+    console.error(error);
     res.status(400).json({
       status: false,
-      message: error.message
+      message: error.message,
+    });
+  }
+};
+
+// Get User Details by ID
+export const getUserDetails = async (req, res) => {
+  try {
+    const userId = req.params.id; // Get user ID from the URL params
+
+    // Fetch the user from the database by ID
+    const user = await User.findById(userId).lean();
+
+    // If user not found, return a 404 response
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+    }
+
+    // Return the user data as response
+    res.status(200).json({
+      status: true,
+      message: "User details fetched successfully",
+      user: {
+        id: user._id,
+        i_am: user.i_am,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        about: user.about,
+        interests: user.interests,
+        hobbies: user.hobbies,
+        profile_image: user.profile_image,
+        category: user.category,
+        address: user.address,
+        likes: user.likes,
+        skin_color: user.skin_color,
+        height: user.height,
+        weight: user.weight,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: false,
+      message: error.message,
     });
   }
 };

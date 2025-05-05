@@ -36,11 +36,7 @@ export const createTemplateSchema = Joi.object({
             'any.required': 'Subject is required'
         }),
     type: Joi.string()
-        .valid('html', 'text')
-        .default('html')
-        .messages({
-            'any.only': 'Type must be either html or text'
-        }),
+        .required(),
     description: Joi.string()
         .max(200)
         .allow('')
@@ -59,7 +55,12 @@ export const createTemplateSchema = Joi.object({
         .unique('name')
         .messages({
             'array.unique': 'Variable names must be unique'
-        })
+        }),
+    status: Joi.boolean()
+        .messages({
+            'boolean.base': 'Status must be either true or false'
+        }),
+
 });
 
 export const updateTemplateSchema = Joi.object({
@@ -78,10 +79,7 @@ export const updateTemplateSchema = Joi.object({
             'string.max': 'Subject cannot exceed 100 characters'
         }),
     type: Joi.string()
-        .valid('html', 'text')
-        .messages({
-            'any.only': 'Type must be either html or text'
-        }),
+        .required(),
     description: Joi.string()
         .max(200)
         .allow('')
@@ -99,9 +97,9 @@ export const updateTemplateSchema = Joi.object({
         .messages({
             'array.unique': 'Variable names must be unique'
         }),
-    status: Joi.string()
-        .valid('active', 'inactive')
+    status: Joi.boolean()
         .messages({
-            'any.only': 'Status must be either active or inactive'
-        })
+            'boolean.base': 'Status must be either true or false'
+        }),
+
 }).min(1);

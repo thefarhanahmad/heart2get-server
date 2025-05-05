@@ -99,70 +99,67 @@ export const createUserSchema = Joi.object({
 });
 
 export const updateUserSchema = Joi.object({
-  name: Joi.string()
-    .min(2)
-    .max(50)
-    .messages({
-      'string.min': 'Name must be at least 2 characters',
-      'string.max': 'Name cannot exceed 50 characters'
-    }),
-  email: Joi.string()
-    .email()
-    .messages({
-      'string.email': 'Please enter a valid email'
-    }),
+  name: Joi.string().min(2).max(50).messages({
+    "string.min": "Name must be at least 2 characters",
+    "string.max": "Name cannot exceed 50 characters",
+  }),
+  email: Joi.string().email().messages({
+    "string.email": "Please enter a valid email",
+  }),
   mobile: Joi.string()
     .pattern(/^\+?[1-9]\d{1,14}$/)
     .messages({
-      'string.pattern.base': 'Please enter a valid mobile number'
+      "string.pattern.base": "Please enter a valid mobile number",
     }),
-  i_am: Joi.string()
-    .valid('Male', 'Female', 'Other')
-    .messages({
-      'any.only': 'Gender must be either Male, Female, or Other'
-    }),
-  interested_in: Joi.string()
-    .valid('Male', 'Female', 'Both')
-    .messages({
-      'any.only': 'Interest must be either Male, Female, or Both'
-    }),
-  age: Joi.number()
-    .min(18)
-    .max(120)
-    .messages({
-      'number.min': 'Age must be at least 18',
-      'number.max': 'Age cannot exceed 120'
-    }),
-  about: Joi.string()
-    .max(500)
-    .allow('')
-    .messages({
-      'string.max': 'About section cannot exceed 500 characters'
-    }),
+  i_am: Joi.string().valid("Male", "Female", "Other").messages({
+    "any.only": "Gender must be either Male, Female, or Other",
+  }),
+  interested_in: Joi.string().valid("Male", "Female", "Both").messages({
+    "any.only": "Interest must be either Male, Female, or Both",
+  }),
+  age: Joi.number().min(18).max(120).messages({
+    "number.min": "Age must be at least 18",
+    "number.max": "Age cannot exceed 120",
+  }),
+  about: Joi.string().max(500).allow("").messages({
+    "string.max": "About section cannot exceed 500 characters",
+  }),
   likes: Joi.array().items(Joi.string()),
-  interests: Joi.array().items(Joi.string()),
+  interests: Joi.array(),
   hobbies: Joi.array().items(Joi.string()),
-  skin_color: Joi.string().allow(''),
-  height: Joi.number()
-    .min(100)
-    .max(250)
-    .messages({
-      'number.min': 'Height must be at least 100 cm',
-      'number.max': 'Height cannot exceed 250 cm'
-    }),
-  weight: Joi.number()
-    .min(30)
-    .max(200)
-    .messages({
-      'number.min': 'Weight must be at least 30 kg',
-      'number.max': 'Weight cannot exceed 200 kg'
-    }),
+  skin_color: Joi.string().allow(""),
+  height: Joi.number().min(100).max(250).messages({
+    "number.min": "Height must be at least 100 cm",
+    "number.max": "Height cannot exceed 250 cm",
+  }),
+  weight: Joi.number().min(30).max(200).messages({
+    "number.min": "Weight must be at least 30 kg",
+    "number.max": "Weight cannot exceed 200 kg",
+  }),
   address: addressSchema,
-  profession: Joi.string().allow(''),
-  marital_status: Joi.string().valid('married', 'unmarried', 'widow', null).allow(null),
+  profession: Joi.string().allow(""),
+  marital_status: Joi.string()
+    .valid("married", "unmarried", "widow", null)
+    .allow(null),
   category: Joi.string()
-    .valid('Casual Dating', 'Serious Relationship', 'Friendship')
+    .valid("Casual Dating", "Serious Relationship", "Friendship")
     .messages({
-      'any.only': 'Invalid category selected'
-    })
-}).min(1);
+      "any.only": "Invalid category selected",
+    }),
+})
+  .min(1)
+  .unknown(true);
+
+// middleware to handle json data
+export const parseJsonFields = (fields) => (req, res, next) => {
+  fields.forEach((field) => {
+    if (req.body[field]) {
+      try {
+        req.body[field] = JSON.parse(req.body[field]);
+      } catch (e) {
+        // Leave it as-is or handle error gracefully
+      }
+    }
+  });
+  next();
+};

@@ -100,6 +100,7 @@ const userSchema = new mongoose.Schema({
     maxLength: [500, 'About section cannot exceed 500 characters']
   },
   likes: [{
+    required: false,
     type: String,
     trim: true
   }],
@@ -108,6 +109,7 @@ const userSchema = new mongoose.Schema({
     ref: 'Interest'
   }],
   hobbies: [{
+    required: false,
     type: String,
     trim: true
   }],

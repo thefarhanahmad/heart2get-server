@@ -1,5 +1,6 @@
 import Admin from '../../models/adminModel.js';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
 
 export const createAdmin = async (req, res) => {
   try {
@@ -91,35 +92,30 @@ export const getAdminById = async (req, res) => {
 
 export const updateAdmin = async (req, res) => {
   try {
-    const admin = await Admin.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).select('-password');
+    const imageData = req.file ? {
+      data: fs.readFileSync(req.file.path),
+      contentType: req.file.mimetype
+    } : undefined;
 
-    if (!admin) {
-      return res.status(404).json({
-        status: false,
-        message: "Admin not found"
-      });
-    }
+    const update = {
+      name: req.body.name,
+      ...(imageData && { profile_image: imageData })
+    };
 
-    res.status(200).json({
+    const admin = await Admin.findByIdAndUpdate(req.params.id, update, { new: true });
+
+    if (!admin) return res.status(404).json({ status: false, message: 'Admin not found' });
+
+    res.json({
       status: true,
-      message: "Admin updated successfully",
+      message: 'Updated',
       data: {
-        id: admin._id,
         name: admin.name,
-        email: admin.email,
-        role: admin.role,
-        permissions: admin.permissions
+        profile_image: `data:${admin.profile_image.contentType};base64,${admin.profile_image.data.toString('base64')}`
       }
     });
-  } catch (error) {
-    res.status(400).json({
-      status: false,
-      message: error.message
-    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
   }
 };
 

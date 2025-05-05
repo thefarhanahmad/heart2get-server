@@ -1,14 +1,14 @@
-import User from '../models/userModel.js';
-import AppRating from '../models/appRatingModel.js';
+import User from "../models/userModel.js";
+import AppRating from "../models/appRatingModel.js";
 
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).lean();
+    const user = await User.findById(req.user._id).lean().populate("interests");
 
     if (!user) {
       return res.status(404).json({
         status: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
@@ -33,13 +33,15 @@ export const getProfile = async (req, res) => {
         address: user.address,
         subscription: user.subscription,
         genderPreference: user.interested_in,
-        status: user.status
-      }
+        status: user.status,
+        profession: user.profession,
+        marital_status: user.marital_status,
+      },
     });
   } catch (error) {
     res.status(500).json({
       status: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -51,18 +53,18 @@ export const deleteAccount = async (req, res) => {
     // Delete user and related data
     await Promise.all([
       User.findByIdAndDelete(userId),
-      AppRating.deleteMany({ user_id: userId })
+      AppRating.deleteMany({ user_id: userId }),
       // Add other related data deletion here
     ]);
 
     res.status(200).json({
       status: true,
-      message: 'Account deleted successfully'
+      message: "Account deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
       status: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -85,18 +87,18 @@ export const rateApp = async (req, res) => {
       await AppRating.create({
         user_id: userId,
         rating,
-        feedback
+        feedback,
       });
     }
 
     res.status(200).json({
       status: true,
-      message: 'Thanks for your feedback!'
+      message: "Thanks for your feedback!",
     });
   } catch (error) {
     res.status(500).json({
       status: false,
-      message: error.message
+      message: error.message,
     });
   }
 };

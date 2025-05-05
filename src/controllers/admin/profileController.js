@@ -1,6 +1,8 @@
 import Admin from '../../models/adminModel.js';
 import AdminProfile from '../../models/adminProfileModel.js';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 
 export const getProfile = async (req, res) => {
     try {
@@ -34,26 +36,38 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const { name, mobile } = req.body;
-        const profile_image = req.file?.path;
+        const profile_image_temp = req.files?.profile_image?.[0]?.path; // Get temp image path
 
+        if (!profile_image_temp) {
+            return res.status(400).json({ status: false, message: 'No profile image uploaded!' });
+        }
+
+        // Move image from temporary directory to permanent directory
+        const profile_image = path.join('uploads/admin', path.basename(profile_image_temp));
+
+        // Move the file to the permanent directory
+        fs.renameSync(profile_image_temp, profile_image);
+
+        // Update the admin profile
         const admin = await Admin.findByIdAndUpdate(
             req.admin._id,
             { name, mobile },
             { new: true }
         ).select('-password');
 
+        // Check if AdminProfile exists or create new
         let adminProfile = await AdminProfile.findOne({ admin_id: req.admin._id });
 
         if (!adminProfile) {
             adminProfile = new AdminProfile({ admin_id: req.admin._id });
         }
 
-        if (profile_image) {
-            adminProfile.profile_image = profile_image;
-        }
+        // Save the new profile image path to the AdminProfile
+        adminProfile.profile_image = profile_image; // Store the permanent image path
 
         await adminProfile.save();
 
+        // Return success response
         res.status(200).json({
             status: true,
             message: "Profile updated successfully",
@@ -61,7 +75,7 @@ export const updateProfile = async (req, res) => {
                 id: admin._id,
                 name: admin.name,
                 mobile: admin.mobile,
-                profile_image: adminProfile.profile_image
+                profile_image: adminProfile.profile_image // Send the permanent image path
             }
         });
     } catch (error) {

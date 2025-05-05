@@ -9,6 +9,7 @@ export const getAllPayments = async (req, res) => {
         const skip = (page - 1) * per_page;
 
         const totalPayments = await Payment.countDocuments();
+        console.log('total payment', totalPayments);
         const totalPages = Math.ceil(totalPayments / per_page);
 
         const payments = await Payment.find()
@@ -18,27 +19,26 @@ export const getAllPayments = async (req, res) => {
             .skip(skip)
             .limit(per_page)
             .lean();
-
-        const formattedPayments = payments.map(payment => ({
-            id: payment._id,
-            user_id: payment.user_id._id,
-            user_name: payment.user_id.name,
-            plan_name: payment.plan_id.name,
-            amount: payment.amount,
-            payment_method: payment.payment_method,
-            transaction_id: payment.transaction_id,
-            payment_response: payment.payment_response,
-            status: payment.status,
-            created_at: payment.createdAt
-        }));
-
+        console.log('payment', payments);
+        // const formattedPayments = payments.map(payment => ({
+        //     id: payment._id,
+        //     user_id: payment.user_id._id,
+        //     user_name: payment.user_id.name,
+        //     plan_name: payment.plan_id.name,
+        //     amount: payment.amount,
+        //     payment_method: payment.payment_method,
+        //     transaction_id: payment.transaction_id,
+        //     payment_response: payment.payment_response,
+        //     status: payment.status,
+        //     created_at: payment.createdAt
+        // }));
         res.status(200).json({
             status: true,
             data: {
                 current_page: page,
                 total_pages: totalPages,
                 total_records: totalPayments,
-                payments: formattedPayments
+                payments: payments
             }
         });
     } catch (error) {

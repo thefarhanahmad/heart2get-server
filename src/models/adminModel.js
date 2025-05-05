@@ -2,13 +2,13 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const permissionSchema = new mongoose.Schema({
+  dashboard: { type: Boolean, default: false },
   users: { type: Boolean, default: false },
   admins: { type: Boolean, default: false },
   content: { type: Boolean, default: false },
   settings: { type: Boolean, default: false },
   reports: { type: Boolean, default: false },
   payments: { type: Boolean, default: false },
-  chats: { type: Boolean, default: false },
   subscriptions: { type: Boolean, default: false },
   questions: { type: Boolean, default: false },
   notifications: { type: Boolean, default: false },
@@ -16,9 +16,9 @@ const permissionSchema = new mongoose.Schema({
   banned: { type: Boolean, default: false },
   interests: { type: Boolean, default: false },
   introScreens: { type: Boolean, default: false },
-  verifications: { type: Boolean, default: false },
+  // verifications: { type: Boolean, default: false },
   logs: { type: Boolean, default: false },
-  emailTemplates: { type: Boolean, default: false },
+  emailtemplates: { type: Boolean, default: false },
   support: { type: Boolean, default: false },
   profile: { type: Boolean, default: false }
 });
@@ -35,6 +35,10 @@ const adminSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true
+  },
+  profile_image: {
+    data: Buffer,
+    contentType: String
   },
   password: {
     type: String,

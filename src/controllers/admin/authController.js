@@ -46,7 +46,23 @@ export const login = async (req, res) => {
     }
 
     const token = generateToken(admin);
+    // Prepare permissions array
+    const permissions = [];
 
+    if (admin.permissions && typeof admin.permissions === 'object') {
+      // Convert the Mongoose object to a plain JavaScript object if necessary
+      const permissionsObject = admin.permissions.toObject ? admin.permissions.toObject() : admin.permissions;
+
+      for (const [key, value] of Object.entries(permissionsObject)) {
+        // Check if the key is an internal Mongoose property, and skip it
+        if (!key.startsWith('$') && value === true) {
+          permissions.push(key);
+        }
+      }
+    }
+
+    console.log('admin.permissions:', admin.permissions); // Log the raw permissions object
+    console.log('permissions array:', permissions);
     res.status(200).json({
       status: true,
       message: 'Login successful',
@@ -56,7 +72,9 @@ export const login = async (req, res) => {
           id: admin._id,
           name: admin.name,
           email: admin.email,
-          role: admin.role
+          role: admin.role,
+          mobile: admin.mobile,
+          permissions: permissions
         }
       }
     });

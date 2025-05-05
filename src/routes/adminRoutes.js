@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-
+import fs from 'fs';
 import { protectAdmin } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validationMiddleware.js';
 import * as adminController from '../controllers/admin/adminController.js';
@@ -19,7 +19,9 @@ import * as activityLogController from '../controllers/admin/activityLogControll
 import * as bannedUserController from '../controllers/admin/bannedUserController.js';
 import * as analyticsController from '../controllers/admin/analyticsController.js';
 import * as emailTemplateController from '../controllers/admin/emailTemplateController.js';
+import * as supportController from '../controllers/admin/supportController.js';
 import { createTemplateSchema, updateTemplateSchema } from '../validations/emailTemplateValidation.js';
+
 import {
   createQuestionSchema,
   updateQuestionSchema,
@@ -27,34 +29,44 @@ import {
   updateCategorySchema
 } from '../validations/quizValidation.js';
 
-// Configure multer for file uploads
+// Temp upload path
+const tempDir = path.join(process.cwd(), 'temp_uploads');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+const adminDir = path.join(process.cwd(), 'uploads/admin');
+if (!fs.existsSync(adminDir)) {
+  fs.mkdirSync(adminDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+  destination: (req, file, cb) => {
+    cb(null, tempDir);
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'admin-' + uniqueSuffix + path.extname(file.originalname));
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '_' + file.originalname);
   }
 });
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
+// Filter image files only (optional)
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'), false);
   }
-});
+};
+
+const upload = multer({ storage, fileFilter });
+
+// Middleware to accept fields
+const uploadUserImages = upload.fields([
+  { name: 'profile_image', maxCount: 1 },
+  { name: 'cover_image', maxCount: 1 }
+]);
 
 
 const router = express.Router();
-
 // Auth Routes
 router.post('/auth/login', authController.login);
 
@@ -73,8 +85,35 @@ router.post('/admins/:id/assign-role', protectAdmin, adminController.assignRole)
 // User Management
 router.get('/users', protectAdmin, userController.getAllUsers);
 router.get('/users/:id', protectAdmin, userController.getSingleUser);
-router.post('/users', protectAdmin, userController.createUser);
-router.put('/users/:id', protectAdmin, userController.updateUser);
+// router.post('/users', handleUserUploads, userController.createUser);
+router.post('/users', (req, res, next) => {
+  handleUserUploads(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          status: false,
+          message: 'Image size should not exceed 5MB',
+        });
+      }
+      return res.status(400).json({
+        status: false,
+        message: `Multer error: ${err.message}`,
+      });
+    } else if (err) {
+      return res.status(400).json({
+        status: false,
+        message: `Upload error: ${err.message || 'Unknown error'}`,
+      });
+    }
+    next(); // Proceed to controller
+  });
+}, userController.createUser);
+
+router.put('/users/:id', protectAdmin, upload.fields([
+  { name: 'profile_image', maxCount: 1 },
+  { name: 'cover_image', maxCount: 1 }
+]), userController.updateUser);
+
 router.delete('/users/:id', protectAdmin, userController.deleteUser);
 router.patch('/users/:id/status', protectAdmin, userController.updateUserStatus);
 router.get('/users/premium', protectAdmin, userController.getPremiumUsers);
@@ -95,9 +134,9 @@ router.get('/quiz/dashboard', protectAdmin, quizController.getQuizDashboardStats
 
 // Notification Management
 router.get('/notifications', protectAdmin, notificationController.getAllNotifications);
+router.delete('/notifications/clear', protectAdmin, notificationController.clearAllNotifications);
 router.delete('/notifications/:id', protectAdmin, notificationController.deleteNotification);
 router.put('/notifications/:id/read', protectAdmin, notificationController.markAsRead);
-router.delete('/notifications/clear', protectAdmin, notificationController.clearAllNotifications);
 
 // Payment Management
 router.get('/payments', protectAdmin, paymentController.getAllPayments);
@@ -137,7 +176,16 @@ router.get('/dashboard', protectAdmin, dashboardController.getDashboardStats);
 
 // Profile Routes
 router.get('/profile', protectAdmin, profileController.getProfile);
-router.put('/profile/update', protectAdmin, upload.single('profile_image'), profileController.updateProfile);
+// router.put('/profile/update', protectAdmin, upload.single('profile_image'), profileController.updateProfile);
+router.put(
+  '/profile/update',
+  protectAdmin,
+  upload.fields([
+    { name: 'profile_image', maxCount: 1 }
+  ]),
+  profileController.updateProfile
+);
+
 router.put('/profile/change-password', protectAdmin, profileController.changePassword);
 
 // Activity Log Routes
@@ -149,7 +197,7 @@ router.delete('/activity-logs/:id', protectAdmin, activityLogController.deleteLo
 
 
 // Banned User Management Routes
-router.get('/users/banned', protectAdmin, bannedUserController.getBannedUsers);
+router.get('/users/banned/list', protectAdmin, bannedUserController.getBannedUsers);
 router.put('/users/:user_id/ban', protectAdmin, bannedUserController.banUser);
 router.put('/users/:user_id/unban', protectAdmin, bannedUserController.unbanUser);
 router.patch('/users/:user_id/status', protectAdmin, bannedUserController.updateUserStatus);
@@ -159,6 +207,13 @@ router.patch('/users/:user_id/status', protectAdmin, bannedUserController.update
 router.get('/recent-activities', protectAdmin, analyticsController.getRecentActivities);
 router.post('/user-growth-chart', protectAdmin, analyticsController.getUserGrowthChart);
 router.post('/revenue-chart', protectAdmin, analyticsController.getRevenueChart);
+
+
+// Admin routes for support
+router.get('/support/tickets', protectAdmin, supportController.listTickets);
+router.get('/support/tickets/:ticket_id', protectAdmin, supportController.getTicketById);
+router.post('/support/tickets/:ticket_id/reply', protectAdmin, supportController.replyToTicket);
+router.put('/support/tickets/:ticket_id/status', protectAdmin, supportController.updateStatus);
 
 
 

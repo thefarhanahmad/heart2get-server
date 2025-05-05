@@ -120,11 +120,13 @@ export const getRevenueChart = async (req, res) => {
                 });
         }
 
-        const payments = await Payment.find({
-            createdAt: { $gte: startDate },
-            status: 'success'
-        }).lean();
 
+
+
+        const payments = await Payment.find({
+            createdAt: { $gte: startDate }
+        }).lean();
+        console.log("Query:", payments);
         const revenueData = {};
         payments.forEach(payment => {
             const date = format(payment.createdAt, dateFormat);
