@@ -6,6 +6,11 @@ const paymentSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
   plan_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'SubscriptionPlan',

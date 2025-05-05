@@ -1,6 +1,16 @@
 import mongoose from 'mongoose';
 
 const interestSchema = new mongoose.Schema({
+  fromUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
+  toUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
   name: {
     type: String,
     required: true,
