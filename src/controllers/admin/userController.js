@@ -158,6 +158,7 @@ export const createUser = async (req, res) => {
     // Ensure the user's base folder exists
     createFolderIfNotExists(userBasePath);
 
+    const baseUrl = `${req.protocol}:/${req.get("host")}/`;
     let profileImagePath = '';
     let coverImagePath = '';
 
@@ -172,8 +173,9 @@ export const createUser = async (req, res) => {
         const finalPath = path.join(profileFolder, cleanFileName);
         fs.renameSync(profileImageFile.path, finalPath);
         // Save full relative path in DB
-        profileImagePath = path.join(userBasePath, 'profile', cleanFileName).replace(/\\/g, '/');
+        profileImagePath = `${baseUrl}/uploads/users/${userId}/profile/${cleanFileName}`;
 
+        console.log('profile image', profileImagePath)
       }
       // Cover Image Handling
       if (req.files['cover_image']) {
@@ -186,9 +188,9 @@ export const createUser = async (req, res) => {
         const cleanFileName = path.basename(coverImageFile.originalname).replace(/\s+/g, '_');
         const finalPath = path.join(coverFolder, cleanFileName);
         fs.renameSync(coverImageFile.path, finalPath);
+        coverImagePath = `${baseUrl}/uploads/users/${userId}/cover/${cleanFileName}`;
 
-        coverImagePath = path.join(userBasePath, 'cover', cleanFileName).replace(/\\/g, '/');
-
+        console.log('coverImagePath', coverImagePath)
       }
       // Update user with image paths
       await User.findByIdAndUpdate(userId, {
@@ -218,6 +220,7 @@ export const updateUser = async (req, res) => {
 
     const userId = req.params.id;
 
+    const baseUrl = `${req.protocol}:/${req.get("host")}/`;
     // Find user by ID
     const user = await User.findById(userId);
     if (!user) {
@@ -271,7 +274,7 @@ export const updateUser = async (req, res) => {
       fs.renameSync(file.path, finalPath);
 
       // Set relative DB path
-      req.body.profile_image = path.join(userBasePath, 'profile', cleanFileName).replace(/\\/g, '/');
+      req.body.profile_image = `${baseUrl}/uploads/users/${userId}/profile/${cleanFileName}`;
     }
 
     // Optional: Handle cover image update
@@ -285,7 +288,7 @@ export const updateUser = async (req, res) => {
 
       fs.renameSync(file.path, finalPath);
 
-      req.body.cover_image = path.join(userBasePath, 'cover', cleanFileName).replace(/\\/g, '/');
+      req.body.cover_image = `${baseUrl}/uploads/users/${userId}/cover/${cleanFileName}`;
     }
 
     // Update user information in database

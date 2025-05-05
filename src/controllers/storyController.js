@@ -54,10 +54,9 @@ export const createStory = async (req, res) => {
 export const getAllStories = async (req, res) => {
   try {
     const userId = req.user._id;
-
-    // Get stories less than 24 hours old
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // Fetch all active stories in the last 24 hours
     const stories = await Story.find({
       createdAt: { $gte: oneDayAgo },
       status: "active",
@@ -66,44 +65,50 @@ export const getAllStories = async (req, res) => {
       .sort("-createdAt")
       .lean();
 
-    const formattedStories = await Promise.all(
-      stories.map(async (story) => {
-        // Check if current user has viewed this story
-        const hasViewed = story.views.some(
-          (view) => view.user_id.toString() === userId.toString()
-        );
+    const yourStories = [];
+    const viewedStories = [];
+    const unviewedStories = [];
 
-        // If not viewed, mark as viewed
-        if (!hasViewed) {
-          await Story.findByIdAndUpdate(story._id, {
-            $push: {
-              views: {
-                user_id: userId,
-                viewed_at: new Date(),
-              },
-            },
-          });
-        }
+    for (const story of stories) {
+      const formattedStory = {
+        id: story._id,
+        user: {
+          id: story.user_id._id,
+          name: story.user_id.name,
+          profile: story.user_id.profile_image,
+        },
+        media_url: story.media_url,
+        media_type: story.media_type,
+        created_at: formatDistanceToNow(new Date(story.createdAt), {
+          addSuffix: true,
+        }),
+      };
 
-        return {
-          id: story._id,
-          user: {
-            id: story.user_id._id,
-            name: story.user_id.name,
-            profile: story.user_id.profile_image,
+      const isViewed = story.views.some(
+        (view) => view.user_id.toString() === userId.toString()
+      );
+
+      if (story.user_id._id.toString() === userId.toString()) {
+        yourStories.push(formattedStory);
+      } else if (isViewed) {
+        viewedStories.push(formattedStory);
+      } else {
+        unviewedStories.push(formattedStory);
+
+        // Mark as viewed now
+        await Story.findByIdAndUpdate(story._id, {
+          $push: {
+            views: { user_id: userId, viewed_at: new Date() },
           },
-          media_url: story.media_url,
-          media_type: story.media_type,
-          created_at: formatDistanceToNow(new Date(story.createdAt), {
-            addSuffix: true,
-          }),
-        };
-      })
-    );
+        });
+      }
+    }
 
     res.status(200).json({
       status: true,
-      stories: formattedStories,
+      yourStories,
+      unviewedStories,
+      viewedStories,
     });
   } catch (error) {
     res.status(500).json({

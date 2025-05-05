@@ -162,13 +162,18 @@ export const updateProfile = async (req, res) => {
     console.log("req files to update profile image : ", req.files);
 
     // Handle file uploads if any
-    if (req.files) {
-      if (req.files.profile_image && req.files.profile_image[0]) {
-        updateData.profile_image = req.files.profile_image[0].path;
-      }
-      if (req.files.banner_image && req.files.banner_image[0]) {
-        updateData.cover_image = req.files.banner_image[0].path; // note: cover_image instead of banner_image in model
-      }
+    if (req.files.profile_image && req.files.profile_image[0]) {
+      const profilePath = req.files.profile_image[0].path.replace(/\\/g, "/"); // Fix Windows paths
+      updateData.profile_image = `${req.protocol}://${req.get(
+        "host"
+      )}/${profilePath}`;
+    }
+
+    if (req.files.banner_image && req.files.banner_image[0]) {
+      const bannerPath = req.files.banner_image[0].path.replace(/\\/g, "/");
+      updateData.cover_image = `${req.protocol}://${req.get(
+        "host"
+      )}/${bannerPath}`;
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
