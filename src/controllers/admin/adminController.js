@@ -6,6 +6,11 @@ export const createAdmin = async (req, res) => {
   try {
     const { permissions, ...adminData } = req.body;
 
+    const existing = await Admin.findOne({ email: req.body.email });
+    if (existing) {
+      return res.status(400).json({ message: 'Email already exists.' });
+    }
+
     const admin = await Admin.create({
       ...adminData,
       permissions: permissions || {}

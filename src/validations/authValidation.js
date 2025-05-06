@@ -2,7 +2,7 @@ import Joi from 'joi';
 
 export const sendOtpSchema = Joi.object({
   mobile: Joi.string()
-    .pattern(/^[0-9]{10}$/)
+    .pattern(/^\+?[1-9]\d{1,14}$/)
     .required()
     .messages({
       'string.pattern.base': 'Mobile number must be 10 digits',
@@ -12,7 +12,7 @@ export const sendOtpSchema = Joi.object({
 
 export const verifyOtpSchema = Joi.object({
   mobile: Joi.string()
-    .pattern(/^[0-9]{10}$/)
+    .pattern(/^\+?[1-9]\d{1,14}$/)
     .required()
     .messages({
       'string.pattern.base': 'Mobile number must be 10 digits',

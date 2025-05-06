@@ -183,9 +183,35 @@ export const getAllCategories = async (req, res) => {
             }))
         });
     } catch (error) {
+        // Handle MongoDB duplicate key error
+        if (error.code === 11000 && error.keyPattern?.name) {
+            return res.status(400).json({
+                status: false,
+                message: "Validation error",
+                errors: [{
+                    field: "name",
+                    message: "Category name already exists"
+                }]
+            });
+        }
+
+        // Joi or Mongoose validation errors
+        if (error.name === 'ValidationError') {
+            const errors = Object.entries(error.errors).map(([field, err]) => ({
+                field,
+                message: err.message
+            }));
+            return res.status(400).json({
+                status: false,
+                message: "Validation error",
+                errors
+            });
+        }
+
+        // Other errors
         res.status(500).json({
             status: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };
@@ -215,9 +241,32 @@ export const updateCategory = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(400).json({
+        if (error.code === 11000 && error.keyPattern?.name) {
+            return res.status(400).json({
+                status: false,
+                message: "Validation error",
+                errors: [{
+                    field: "name",
+                    message: "Category name already exists"
+                }]
+            });
+        }
+
+        if (error.name === 'ValidationError') {
+            const errors = Object.entries(error.errors).map(([field, err]) => ({
+                field,
+                message: err.message
+            }));
+            return res.status(400).json({
+                status: false,
+                message: "Validation error",
+                errors
+            });
+        }
+
+        res.status(500).json({
             status: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
 };

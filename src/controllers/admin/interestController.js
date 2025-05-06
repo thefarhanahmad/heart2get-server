@@ -17,6 +17,13 @@ export const createCategory = async (req, res) => {
             }
         });
     } catch (error) {
+        if (error.code === 11000) {
+            // Duplicate key error (e.g. name already exists)
+            return res.status(409).json({
+                status: false,
+                message: "Category with this name already exists"
+            });
+        }
         res.status(400).json({
             status: false,
             message: error.message
@@ -162,6 +169,12 @@ export const createInterest = async (req, res) => {
             }
         });
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                status: false,
+                message: "Interest with this name already exists"
+            });
+        }
         res.status(400).json({
             status: false,
             message: error.message

@@ -22,12 +22,12 @@ const reportSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'resolved', 'dismissed'],
+        enum: ['pending', 'resolved', 'dismissed', 'investigating'],
         default: 'pending'
     },
     admin_action: {
         type: String,
-        enum: ['none', 'warning', 'ban'],
+        enum: ['none', 'warning', 'banned', 'resolved', 'investigating'],
         default: 'none'
     },
     admin_notes: {

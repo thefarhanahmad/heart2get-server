@@ -29,20 +29,20 @@ export const getBannedUsers = async (req, res) => {
                 total_records: total,
                 banned_users: bannedUsers.map(ban => ({
                     _id: ban._id,
-                    user: {
+                    user: ban.user ? {
                         _id: ban.user._id,
                         full_name: ban.user.name,
                         email: ban.user.email,
                         mobile: ban.user.mobile
-                    },
+                    } : null,
                     reason: ban.reason,
                     banned_on: ban.banned_on,
                     duration: ban.duration,
                     expires_on: ban.expires_on,
-                    banned_by: {
+                    banned_by: ban.banned_by ? {
                         _id: ban.banned_by._id,
                         name: ban.banned_by.name
-                    },
+                    } : null,
                     createdAt: ban.createdAt,
                     updatedAt: ban.updatedAt
                 }))

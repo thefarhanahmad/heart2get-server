@@ -19,6 +19,7 @@ const permissionSchema = new mongoose.Schema({
   // verifications: { type: Boolean, default: false },
   logs: { type: Boolean, default: false },
   emailtemplates: { type: Boolean, default: false },
+  emailTemplates: { type: Boolean, default: false },
   support: { type: Boolean, default: false },
   profile: { type: Boolean, default: false }
 });

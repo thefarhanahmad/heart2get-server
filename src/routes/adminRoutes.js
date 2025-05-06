@@ -26,8 +26,22 @@ import {
   createQuestionSchema,
   updateQuestionSchema,
   createCategorySchema,
-  updateCategorySchema
+  updateCategorySchema,
+
 } from '../validations/quizValidation.js';
+
+import {
+  createSubscriptionPlanSchema,
+  updateSubscriptionPlanSchema,
+  updatePlanStatusSchema,
+  purchaseSubscriptionSchema,
+
+} from '../validations/subscriptionValidation.js';
+import {
+  createAdminSchema,
+  updateAdminSchema
+
+} from '../validations/adminValidation.js';
 
 // Temp upload path
 const tempDir = path.join(process.cwd(), 'temp_uploads');
@@ -74,10 +88,10 @@ router.post('/auth/login', authController.login);
 router.post('/create', adminController.createAdmin);
 
 // Admin Management
-router.post('/admins', protectAdmin, adminController.createAdmin);
+router.post('/admins', protectAdmin, validateRequest(createAdminSchema), adminController.createAdmin);
 router.get('/admins', protectAdmin, adminController.getAllAdmins);
 router.get('/admins/:id', protectAdmin, adminController.getAdminById);
-router.put('/admins/:id', protectAdmin, adminController.updateAdmin);
+router.put('/admins/:id', protectAdmin, validateRequest(updateAdminSchema), adminController.updateAdmin);
 router.delete('/admins/:id', protectAdmin, adminController.deleteAdmin);
 router.patch('/admins/:id/status', protectAdmin, adminController.updateAdminStatus);
 router.post('/admins/:id/assign-role', protectAdmin, adminController.assignRole);
@@ -88,6 +102,7 @@ router.get('/users/:id', protectAdmin, userController.getSingleUser);
 // router.post('/users', handleUserUploads, userController.createUser);
 router.post('/users', (req, res, next) => {
   handleUserUploads(req, res, function (err) {
+    console.log("callinf this one url")
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
@@ -145,7 +160,7 @@ router.delete('/payments/:payment_id', protectAdmin, paymentController.deletePay
 
 // Report Management
 router.get('/reports', protectAdmin, reportController.getAllReports);
-router.put('/reports/:reportId', protectAdmin, reportController.updateReportStatus);
+router.put('/reports/:reportId/status', protectAdmin, reportController.updateReportStatus);
 
 
 // Interest Category Routes
@@ -164,10 +179,10 @@ router.delete('/interests/:id', protectAdmin, interestController.deleteInterest)
 
 
 // Subscription Management
-router.post('/subscriptions', protectAdmin, subscriptionController.createSubscriptionPlan);
+router.post('/subscriptions', protectAdmin, validateRequest(createSubscriptionPlanSchema), subscriptionController.createSubscriptionPlan);
 router.get('/subscriptions', protectAdmin, subscriptionController.getAllSubscriptionPlans);
 router.get('/subscriptions/:id', protectAdmin, subscriptionController.getSubscriptionPlanById);
-router.put('/subscriptions/:id', protectAdmin, subscriptionController.updateSubscriptionPlan);
+router.put('/subscriptions/:id', protectAdmin, validateRequest(updateSubscriptionPlanSchema), subscriptionController.updateSubscriptionPlan);
 router.patch('/subscriptions/:id/status', protectAdmin, subscriptionController.updatePlanStatus);
 router.put('/subscriptions/:subscription_id/expire', protectAdmin, subscriptionController.expireUserSubscription);
 
@@ -188,7 +203,6 @@ router.put(
 
 router.put('/profile/change-password', protectAdmin, profileController.changePassword);
 
-// Activity Log Routes
 // Activity Log Routes
 router.get('/activity-logs', protectAdmin, activityLogController.getAllLogs);
 router.post('/activity-logs', protectAdmin, activityLogController.createLog);

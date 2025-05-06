@@ -1,3 +1,4 @@
+import BannedUser from '../../models/bannedUserModel.js';
 import Report from '../../models/reportModel.js';
 import User from '../../models/userModel.js';
 
@@ -11,28 +12,32 @@ export const getAllReports = async (req, res) => {
         const totalPages = Math.ceil(totalReports / per_page);
 
         const reports = await Report.find()
-            .populate('reported_user', 'name email')
+            .populate('reported_user', 'name email profile_image')
             .populate('reported_by', 'name')
             .sort('-createdAt')
             .skip(skip)
             .limit(per_page)
             .lean();
 
+        console.log('reports', reports);
         const formattedReports = reports.map(report => ({
             id: report._id,
-            reportedUser: {
+            reportedUser: report.reported_user ? {
                 id: report.reported_user._id,
-                name: report.reported_user.name
-            },
+                name: report.reported_user.name,
+                email: report.reported_user.email,
+                profile_image: report.reported_user.profile_image
+            } : null,
             reason: report.reason,
-            reportedBy: {
+            reportedBy: report.reported_by ? {
                 id: report.reported_by._id,
                 name: report.reported_by.name
-            },
+            } : null,
             status: report.status,
             admin_action: report.admin_action,
-            created_at: report.createdAt
+            createdAt: report.createdAt
         }));
+
 
         res.status(200).json({
             status: true,
@@ -139,66 +144,99 @@ export const banUser = async (req, res) => {
 
 
 };
-
-
 export const updateReportStatus = async (req, res) => {
     try {
-        const { action } = req.body;
+        const { status, admin_notes } = req.body;
         const reportId = req.params.reportId;
+        const adminId = req.admin._id;
 
-        if (!['approve', 'reject'].includes(action)) {
-            return res.status(400).json({
-                status: false,
-                message: "Invalid action. Must be either 'approve' or 'reject'"
-            });
+        console.log('action', status);
+        const validActions = ['investigating', 'resolved', 'banned'];
+        if (!validActions.includes(status)) {
+            return res.status(400).json({ status: false, message: "Invalid action" });
         }
 
         const report = await Report.findById(reportId);
         if (!report) {
-            return res.status(404).json({
-                status: false,
-                message: "Report not found"
-            });
+            return res.status(404).json({ status: false, message: "Report not found" });
         }
 
-        report.status = action === 'approve' ? 'resolved' : 'dismissed';
-        report.admin_action = action === 'approve' ? 'warning' : 'none';
-        await report.save();
+        const user = await User.findById(report.reported_user);
+        if (!user) {
+            return res.status(404).json({ status: false, message: "Reported user not found" });
+        }
 
-        // If approved, update user's report count and status if necessary
-        if (action === 'approve') {
-            const user = await User.findById(report.reported_user);
-            if (user) {
-                if (!user.report) {
-                    user.report = {
-                        reported_count: 0,
-                        reports: []
-                    };
-                }
-                user.report.reported_count += 1;
-                user.report.reports.push({
-                    reason: report.reason,
-                    created_at: new Date()
-                });
-
-                // If user has been reported multiple times, consider banning
-                if (user.report.reported_count >= 3) {
-                    user.status = 'banned';
-                }
-
-                await user.save();
+        if (status === 'resolved') {
+            if (!user.report) {
+                user.report = { reported_count: 0, reports: [] };
             }
-        }
 
+            user.report.reported_count += 1;
+
+
+            user.report.reports.push({
+                reason: report.reason,
+                by: report?.reported_by,
+                createdAt: new Date()
+            });
+
+            if (user.report.reported_count >= 3) {
+                user.status = 'banned';
+                user.ban_reason = 'Auto-ban due to repeated reports';
+                user.banned_at = new Date();
+            }
+
+            await user.save();
+            report.status = status;
+            report.admin_action = status;
+            report.admin_notes = admin_notes || '';
+            await Report.findByIdAndDelete(reportId);
+
+
+
+        } else if (status === 'banned') {
+            const reason = admin_notes || "User banned due to serious report";
+            const duration = 10; // e.g., 10 days
+            const expires_on = new Date();
+            expires_on.setDate(expires_on.getDate() + duration);
+
+            await BannedUser.create({
+                user: user._id,
+                reason,
+                duration,
+                expires_on,
+                banned_by: adminId
+            });
+
+            user.status = 'banned';
+            user.ban_reason = reason;
+            user.banned_at = new Date();
+            await user.save();
+
+            report.status = 'pending';
+            report.admin_action = status;
+            report.admin_notes = admin_notes || '';
+            await Report.findByIdAndDelete(reportId);
+        }
+        else if (status === 'investigating') {
+
+            report.status = status;
+            report.admin_action = status;
+            report.admin_notes = admin_notes || '';
+
+            await report.save();
+        }
         res.status(200).json({
             status: true,
             message: "Report status updated successfully",
             report: {
                 id: report._id,
                 status: report.status,
-                admin_action: report.admin_action
+                admin_action: report.admin_action,
+                admin_notes: report.admin_notes
             }
         });
+
     } catch (error) {
         res.status(500).json({
             status: false,
