@@ -158,7 +158,7 @@ export const createUser = async (req, res) => {
     // Ensure the user's base folder exists
     createFolderIfNotExists(userBasePath);
 
-    const baseUrl = `${req.protocol}:/${req.get("host")}/`;
+    const baseUrl = `${req.protocol}:/${req.get("host")}`;
     let profileImagePath = '';
     let coverImagePath = '';
 
@@ -220,7 +220,7 @@ export const updateUser = async (req, res) => {
 
     const userId = req.params.id;
 
-    const baseUrl = `${req.protocol}:/${req.get("host")}/`;
+    const baseUrl = `${req.protocol}:/${req.get("host")}`;
     // Find user by ID
     const user = await User.findById(userId);
     if (!user) {

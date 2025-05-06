@@ -20,7 +20,7 @@ const quizQuestionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['single', 'multiple'],
+        enum: ['single', 'multiple', 'text'],
         required: true
     },
     category_id: {

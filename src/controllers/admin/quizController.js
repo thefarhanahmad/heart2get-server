@@ -5,6 +5,7 @@ import User from '../../models/userModel.js';
 // Question Management
 export const createQuestion = async (req, res) => {
     try {
+        console.log('req.body', req.body);
         const question = await QuizQuestion.create(req.body);
 
         res.status(201).json({

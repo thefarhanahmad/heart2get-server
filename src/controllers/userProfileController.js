@@ -208,7 +208,7 @@ export const getUserDetails = async (req, res) => {
     const userId = req.params.id; // Get user ID from the URL params
 
     // Fetch the user from the database by ID
-    const user = await User.findById(userId).lean();
+    const user = await User.findById(userId).lean().populate("interests");
 
     // If user not found, return a 404 response
     if (!user) {
