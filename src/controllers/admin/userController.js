@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import User from '../../models/userModel.js';
 import { createUserSchema } from '../../validations/userValidation.js';
-
+const baseUrl = process.env.BASE_URL;
 import fs from 'fs';
 import path from 'path';
 
@@ -139,13 +139,12 @@ const createFolderIfNotExists = (folderPath) => {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 };
-
 export const createUser = async (req, res) => {
   try {
-    console.log('📦 req.body create user:', req.body);  // form fields
-    console.log('🖼️ req.files:', req.files);  // file details
+    console.log('📦 req.body create user:', req.body);
+    console.log('🖼️ req.files:', req.files);
 
-    // Create user without images first
+    // Step 1: Create user first (empty image paths)
     const user = await User.create({
       ...req.body,
       profile_image: '',
@@ -153,52 +152,52 @@ export const createUser = async (req, res) => {
     });
 
     const userId = user._id;
-    const userBasePath = path.join(process.cwd(), 'uploads', 'users', String(userId));  // Directory for user uploads
+    const relativeUserPath = path.join('uploads', 'users', String(userId));
+    const absoluteUserPath = path.join(process.cwd(), relativeUserPath);
+    createFolderIfNotExists(absoluteUserPath);
 
-    // Ensure the user's base folder exists
-    createFolderIfNotExists(userBasePath);
-
-    const baseUrl = `${req.protocol}:/${req.get("host")}`;
     let profileImagePath = '';
     let coverImagePath = '';
 
-    if (req.files) {
-      // Profile Image Handling
-      if (req.files['profile_image']) {
-        const profileImageFile = req.files['profile_image'][0];
-        const profileFolder = path.join(userBasePath, 'profile');
-        createFolderIfNotExists(profileFolder);  // Ensure profile folder exists
-        console.log('Profile image file exists:', fs.existsSync(profileImageFile.path));  // Debugging check
-        const cleanFileName = path.basename(profileImageFile.originalname).replace(/\s+/g, '_');
-        const finalPath = path.join(profileFolder, cleanFileName);
-        fs.renameSync(profileImageFile.path, finalPath);
-        // Save full relative path in DB
-        profileImagePath = `${baseUrl}/uploads/users/${userId}/profile/${cleanFileName}`;
+    // Handle profile image
+    let profileFile = req.files?.['profile_image']?.[0];
+    if (profileFile) {
+      const cleanFileName = path.basename(profileFile.originalname).replace(/\s+/g, '_');
+      const profileFolder = path.join(absoluteUserPath, 'profile');
+      createFolderIfNotExists(profileFolder);
+      const profileFinalPath = path.join(profileFolder, cleanFileName);
 
-        console.log('profile image', profileImagePath)
-      }
-      // Cover Image Handling
-      if (req.files['cover_image']) {
-        const coverImageFile = req.files['cover_image'][0];
-        const coverFolder = path.join(userBasePath, 'cover');
-        createFolderIfNotExists(coverFolder);  // Ensure cover folder exists
-
-        console.log('Cover image file exists:', fs.existsSync(coverImageFile.path));  // Debugging check
-
-        const cleanFileName = path.basename(coverImageFile.originalname).replace(/\s+/g, '_');
-        const finalPath = path.join(coverFolder, cleanFileName);
-        fs.renameSync(coverImageFile.path, finalPath);
-        coverImagePath = `${baseUrl}/uploads/users/${userId}/cover/${cleanFileName}`;
-
-        console.log('coverImagePath', coverImagePath)
-      }
-      // Update user with image paths
-      await User.findByIdAndUpdate(userId, {
-        profile_image: profileImagePath,
-        cover_image: coverImagePath,
-      });
+      fs.renameSync(profileFile.path, profileFinalPath);
+      profileImagePath = `${baseUrl}/${relativeUserPath}/profile/${cleanFileName}`;
     }
+
+    // Handle cover image
+    let coverFile = req.files?.['cover_image']?.[0];
+    if (coverFile) {
+      const cleanFileName = path.basename(coverFile.originalname).replace(/\s+/g, '_');
+      const coverFolder = path.join(absoluteUserPath, 'cover');
+      createFolderIfNotExists(coverFolder);
+      const coverFinalPath = path.join(coverFolder, cleanFileName);
+
+      if (profileFile && coverFile.path === profileFile.path) {
+        // Same file used — copy instead of rename
+        const profileFinalPath = path.join(absoluteUserPath, 'profile', cleanFileName);
+        fs.copyFileSync(profileFinalPath, coverFinalPath);
+      } else {
+        fs.renameSync(coverFile.path, coverFinalPath);
+      }
+
+      coverImagePath = `${baseUrl}/${relativeUserPath}/cover/${cleanFileName}`;
+    }
+
+    // Step 2: Update user with image paths
+    await User.findByIdAndUpdate(userId, {
+      profile_image: profileImagePath,
+      cover_image: coverImagePath,
+    });
+
     const updatedUser = await User.findById(userId);
+
     res.status(201).json({
       status: true,
       message: 'User created successfully',
@@ -206,13 +205,14 @@ export const createUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error('Error in createUser:', error);
     res.status(400).json({
       status: false,
       message: error.message,
     });
   }
 };
+
 export const updateUser = async (req, res) => {
   try {
     console.log('📦 req.bodyss:', req.body);  // form fields

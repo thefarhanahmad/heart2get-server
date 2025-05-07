@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import Admin from '../../models/adminModel.js';
-
+import sendEmail from '../../utils/sendEmail.js';
+import Crypto from 'crypto';
+import bcrypt from 'bcrypt';
+const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
 const generateToken = (admin) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not defined in environment variables');
@@ -105,5 +108,67 @@ export const createAdmin = async (req, res) => {
       status: false,
       message: error.message
     });
+  }
+};
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await Admin.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'Admin not found' });
+    }
+    // Generate token
+    const resetToken = Crypto.randomBytes(32).toString('hex');
+
+    // Store token and expiration in user document
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpire = Date.now() + 3600000;
+    await user.save();
+
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    const message = `
+      <p>You requested a password reset.</p>
+      <p>Click below to reset your password:</p>
+      <a href="${resetUrl}">Reset Password</a>
+    `;
+
+    await sendEmail({
+      email: user.email,
+      subject: 'Admin Password Reset',
+      html: message,
+    });
+
+    res.json({ status: true, message: 'Password reset email sent' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+
+export const resetPassword = async (req, res) => {
+  const { password, confirmPassword, token } = req.body;
+
+  try {
+    if (password !== confirmPassword)
+      return res.status(400).json({ status: false, message: 'Passwords do not match' });
+
+    const user = await Admin.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ status: false, message: 'Invalid or expired token' });
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.json({ status: true, message: 'Password has been reset' });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
   }
 };

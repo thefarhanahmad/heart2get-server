@@ -15,9 +15,9 @@ const permissionSchema = new mongoose.Schema({
   reported: { type: Boolean, default: false },
   banned: { type: Boolean, default: false },
   interests: { type: Boolean, default: false },
-  introScreens: { type: Boolean, default: false },
+  introscreens: { type: Boolean, default: false },
   // verifications: { type: Boolean, default: false },
-  logs: { type: Boolean, default: false },
+  // logs: { type: Boolean, default: false },
   emailtemplates: { type: Boolean, default: false },
   emailTemplates: { type: Boolean, default: false },
   support: { type: Boolean, default: false },
@@ -46,6 +46,8 @@ const adminSchema = new mongoose.Schema({
     required: [true, 'Password is required'],
     minLength: [6, 'Password must be at least 6 characters']
   },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
   mobile: {
     type: String,
     trim: true

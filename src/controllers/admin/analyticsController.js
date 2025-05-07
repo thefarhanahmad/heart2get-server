@@ -5,7 +5,7 @@ import Subscription from '../../models/subscriptionPlanModel.js';
 import Admin from '../../models/adminModel.js';
 import Banned from '../../models/bannedUserModel.js';
 import Interest from '../../models/interestModel.js';
-import { startOfDay, subDays, format, startOfMonth, subMonths } from 'date-fns';
+import { startOfDay, subDays, format, startOfMonth, subMonths, eachMonthOfInterval } from 'date-fns';
 
 
 
@@ -95,52 +95,33 @@ export const getRecentActivities = async (req, res) => {
 
 export const getUserGrowthChart = async (req, res) => {
     try {
-        const { time_frame } = req.body;
-        let startDate;
-        let dateFormat;
+        const startDate = subMonths(startOfMonth(new Date()), 6); // Last 7 months
 
-        switch (time_frame) {
-            case 'Last 7 days':
-                startDate = subDays(startOfDay(new Date()), 6);
-                dateFormat = 'yyyy-MM-dd';
-                break;
-            case 'Last 30 days':
-                startDate = subDays(startOfDay(new Date()), 29);
-                dateFormat = 'yyyy-MM-dd';
-                break;
-            case 'Last 3 months':
-                startDate = subMonths(startOfMonth(new Date()), 2);
-                dateFormat = 'yyyy-MM';
-                break;
-            case 'Last year':
-                startDate = subMonths(startOfMonth(new Date()), 11);
-                dateFormat = 'yyyy-MM';
-                break;
-            default:
-                return res.status(400).json({
-                    status: false,
-                    message: "Invalid time frame"
-                });
-        }
-
+        // Fetch users created since startDate
         const users = await User.find({
             createdAt: { $gte: startDate }
         }).lean();
 
+        // Generate month labels like ["Jan", "Feb", ...]
+        const labels = Array.from({ length: 7 }, (_, i) =>
+            format(subMonths(new Date(), 6 - i), 'MMM')
+        );
+
+        // Aggregate user signups by month
         const growthData = {};
         users.forEach(user => {
-            const date = format(user.createdAt, dateFormat);
-            growthData[date] = (growthData[date] || 0) + 1;
+            const month = format(user.createdAt, 'MMM');
+            growthData[month] = (growthData[month] || 0) + 1;
         });
 
-        const labels = Object.keys(growthData).sort();
-        const userGrowth = labels.map(date => growthData[date]);
+        // Map revenue to labels
+        const user_growth = labels.map(month => growthData[month] || 0);
 
         res.status(200).json({
             status: "success",
             data: {
                 labels,
-                user_growth: userGrowth
+                user_growth
             },
             message: "User growth data retrieved successfully"
         });
@@ -156,24 +137,22 @@ export const getRevenueChart = async (req, res) => {
     try {
         const { time_frame } = req.body;
         let startDate;
-        let dateFormat;
+        let isMonthly = false;
 
         switch (time_frame) {
             case 'Last 7 days':
                 startDate = subDays(startOfDay(new Date()), 6);
-                dateFormat = 'yyyy-MM-dd';
                 break;
             case 'Last 30 days':
                 startDate = subDays(startOfDay(new Date()), 29);
-                dateFormat = 'yyyy-MM-dd';
                 break;
             case 'Last 3 months':
                 startDate = subMonths(startOfMonth(new Date()), 2);
-                dateFormat = 'yyyy-MM';
+                isMonthly = true;
                 break;
             case 'Last year':
                 startDate = subMonths(startOfMonth(new Date()), 11);
-                dateFormat = 'yyyy-MM';
+                isMonthly = true;
                 break;
             default:
                 return res.status(400).json({
@@ -182,21 +161,24 @@ export const getRevenueChart = async (req, res) => {
                 });
         }
 
-
-
-
         const payments = await Payment.find({
             createdAt: { $gte: startDate }
         }).lean();
-        console.log("Query:", payments);
-        const revenueData = {};
+
+        const revenueMap = {};
+
         payments.forEach(payment => {
-            const date = format(payment.createdAt, dateFormat);
-            revenueData[date] = (revenueData[date] || 0) + payment.amount;
+            const key = format(payment.createdAt, 'yyyy-MM');
+            revenueMap[key] = (revenueMap[key] || 0) + payment.amount;
         });
 
-        const labels = Object.keys(revenueData).sort();
-        const revenue = labels.map(date => revenueData[date]);
+        // Prepare month labels and revenue values
+        const months = eachMonthOfInterval({ start: startDate, end: new Date() });
+        const labels = months.map(m => format(m, 'MMM'));
+        const revenue = months.map(m => {
+            const key = format(m, 'yyyy-MM');
+            return revenueMap[key] || 0;
+        });
 
         res.status(200).json({
             status: "success",

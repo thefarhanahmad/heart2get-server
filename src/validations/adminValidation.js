@@ -6,6 +6,7 @@ export const loginSchema = Joi.object({
 });
 
 const permissionSchema = Joi.object({
+  dashboard: Joi.boolean().default(false),
   users: Joi.boolean().default(false),
   admins: Joi.boolean().default(false),
   content: Joi.boolean().default(false),
@@ -18,7 +19,7 @@ const permissionSchema = Joi.object({
   reported: Joi.boolean().default(false),
   banned: Joi.boolean().default(false),
   interests: Joi.boolean().default(false),
-  introScreens: Joi.boolean().default(false),
+  introscreens: Joi.boolean().default(false),
   logs: Joi.boolean().default(false),
   emailTemplates: Joi.boolean().default(false),
   emailtemplates: Joi.boolean().default(false),

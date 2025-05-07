@@ -1,6 +1,7 @@
 import Admin from '../../models/adminModel.js';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
+import AdminProfile from '../../models/adminProfileModel.js';
 
 export const createAdmin = async (req, res) => {
   try {
@@ -37,18 +38,24 @@ export const createAdmin = async (req, res) => {
 
 export const getAllAdmins = async (req, res) => {
   try {
-    const admins = await Admin.find()
-      .select('-password')
-      .lean();
+    const admins = await Admin.find().select('-password').lean();
 
-    const formattedAdmins = admins.map(admin => ({
-      id: admin._id,
-      name: admin.name,
-      email: admin.email,
-      role: admin.role,
-      permissions: admin.permissions,
-      status: admin.status || 'active'
-    }));
+    const formattedAdmins = await Promise.all(
+      admins.map(async (admin) => {
+        const profile = await AdminProfile.findOne({ admin_id: admin._id }).lean();
+        return {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role,
+          permissions: admin.permissions,
+          status: admin.status || 'active',
+          profile_image: profile?.profile_image || '',
+          last_login: profile?.last_login || null,
+          last_password_change: profile?.last_password_change || null
+        };
+      })
+    );
 
     res.status(200).json({
       status: true,
@@ -94,32 +101,49 @@ export const getAdminById = async (req, res) => {
     });
   }
 };
-
 export const updateAdmin = async (req, res) => {
   try {
-    const imageData = req.file ? {
-      data: fs.readFileSync(req.file.path),
-      contentType: req.file.mimetype
-    } : undefined;
-
     const update = {
       name: req.body.name,
-      ...(imageData && { profile_image: imageData })
+      email: req.body.email,
+      mobile: req.body.mobile,
+      role: req.body.role,
+      permissions: req.body.permissions
     };
+
+    // If image is uploaded, read and set image data
+    if (req.file) {
+      update.profile_image = {
+        data: fs.readFileSync(req.file.path),
+        contentType: req.file.mimetype
+      };
+    }
 
     const admin = await Admin.findByIdAndUpdate(req.params.id, update, { new: true });
 
-    if (!admin) return res.status(404).json({ status: false, message: 'Admin not found' });
+    if (!admin) {
+      return res.status(404).json({ status: false, message: 'Admin not found' });
+    }
+
+    let profileImageBase64 = '';
+    if (admin.profile_image?.data && admin.profile_image?.contentType) {
+      profileImageBase64 = `data:${admin.profile_image.contentType};base64,${admin.profile_image.data.toString('base64')}`;
+    }
 
     res.json({
       status: true,
       message: 'Updated',
       data: {
         name: admin.name,
-        profile_image: `data:${admin.profile_image.contentType};base64,${admin.profile_image.data.toString('base64')}`
+        email: admin.email,
+        mobile: admin.mobile,
+        role: admin.role,
+        permissions: admin.permissions,
+        profile_image: profileImageBase64
       }
     });
   } catch (err) {
+    console.error('Update error:', err);
     res.status(500).json({ status: false, message: err.message });
   }
 };

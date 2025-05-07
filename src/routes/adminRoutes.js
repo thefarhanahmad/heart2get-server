@@ -21,6 +21,7 @@ import * as analyticsController from '../controllers/admin/analyticsController.j
 import * as emailTemplateController from '../controllers/admin/emailTemplateController.js';
 import * as supportController from '../controllers/admin/supportController.js';
 import { createTemplateSchema, updateTemplateSchema } from '../validations/emailTemplateValidation.js';
+import { forgotPassword, resetPassword } from '../controllers/admin/authController.js';
 
 import {
   createQuestionSchema,
@@ -78,31 +79,9 @@ const uploadUserImages = upload.fields([
   { name: 'profile_image', maxCount: 1 },
   { name: 'cover_image', maxCount: 1 }
 ]);
-
-
-const router = express.Router();
-// Auth Routes
-router.post('/auth/login', authController.login);
-
-// Default admin create Global route
-router.post('/create', adminController.createAdmin);
-
-// Admin Management
-router.post('/admins', protectAdmin, validateRequest(createAdminSchema), adminController.createAdmin);
-router.get('/admins', protectAdmin, adminController.getAllAdmins);
-router.get('/admins/:id', protectAdmin, adminController.getAdminById);
-router.put('/admins/:id', protectAdmin, validateRequest(updateAdminSchema), adminController.updateAdmin);
-router.delete('/admins/:id', protectAdmin, adminController.deleteAdmin);
-router.patch('/admins/:id/status', protectAdmin, adminController.updateAdminStatus);
-router.post('/admins/:id/assign-role', protectAdmin, adminController.assignRole);
-
-// User Management
-router.get('/users', protectAdmin, userController.getAllUsers);
-router.get('/users/:id', protectAdmin, userController.getSingleUser);
-// router.post('/users', handleUserUploads, userController.createUser);
-router.post('/users', (req, res, next) => {
-  handleUserUploads(req, res, function (err) {
-    console.log("callinf this one url")
+const handleUserUploads = (req, res, next) => {
+  uploadUserImages(req, res, function (err) {
+    console.log("Handling user uploads...");
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
@@ -122,7 +101,33 @@ router.post('/users', (req, res, next) => {
     }
     next(); // Proceed to controller
   });
-}, userController.createUser);
+};
+
+
+const router = express.Router();
+// Auth Routes
+router.post('/auth/login', authController.login);
+
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+
+// Default admin create Global route
+router.post('/create', adminController.createAdmin);
+
+// Admin Management
+router.post('/admins', protectAdmin, validateRequest(createAdminSchema), adminController.createAdmin);
+router.get('/admins', protectAdmin, adminController.getAllAdmins);
+router.get('/admins/:id', protectAdmin, adminController.getAdminById);
+router.put('/admins/:id', protectAdmin, validateRequest(updateAdminSchema), adminController.updateAdmin);
+router.delete('/admins/:id', protectAdmin, adminController.deleteAdmin);
+router.patch('/admins/:id/status', protectAdmin, adminController.updateAdminStatus);
+router.post('/admins/:id/assign-role', protectAdmin, adminController.assignRole);
+
+// User Management
+router.get('/users', protectAdmin, userController.getAllUsers);
+router.get('/users/:id', protectAdmin, userController.getSingleUser);
+// router.post('/users', handleUserUploads, userController.createUser);
+router.post('/users', handleUserUploads, userController.createUser);
 
 router.put('/users/:id', protectAdmin, upload.fields([
   { name: 'profile_image', maxCount: 1 },
@@ -228,6 +233,7 @@ router.get('/support/tickets', protectAdmin, supportController.listTickets);
 router.get('/support/tickets/:ticket_id', protectAdmin, supportController.getTicketById);
 router.post('/support/tickets/:ticket_id/reply', protectAdmin, supportController.replyToTicket);
 router.put('/support/tickets/:ticket_id/status', protectAdmin, supportController.updateStatus);
+
 
 
 
