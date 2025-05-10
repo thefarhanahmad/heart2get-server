@@ -20,6 +20,11 @@ import {
   updateProfile,
   getUserDetails,
 } from "../controllers/userProfileController.js";
+import {
+  createSupportTicket,
+  getUserSupportTickets,
+  reportUser,
+} from "../controllers/supportController.js";
 
 const router = express.Router();
 
@@ -57,6 +62,11 @@ const upload = multer({
 
 // Apply protect middleware to all routes
 router.use(protect);
+
+// support tickets
+router.get("/tickets", getUserSupportTickets);
+router.post("/support-ticket", createSupportTicket);
+router.post("/report", reportUser);
 
 // Profile routes
 router.post("/profile/setup", validateRequest(createUserSchema), setupProfile);

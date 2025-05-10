@@ -69,8 +69,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Mobile number is required'],
     trim: true,
-    unique: true,
-    match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid mobile number']
+    unique: true
+    // match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid mobile number']
   },
   i_am: {
     type: String,

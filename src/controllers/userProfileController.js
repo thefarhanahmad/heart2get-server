@@ -4,7 +4,7 @@ export const setupProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const profileData = {
-      name: req.body.fullname,
+      name: req.body.name,
       email: req.body.email,
       i_am: req.body.i_am,
       interested_in: req.body.interested_in,
@@ -18,6 +18,8 @@ export const setupProfile = async (req, res) => {
       weight: req.body.weight,
       address: req.body.address,
       category: req.body.category,
+      marital_status: req.body.marital_status,
+      profession: req.body.profession,
     };
 
     const updatedUser = await User.findByIdAndUpdate(userId, profileData, {
@@ -39,6 +41,8 @@ export const setupProfile = async (req, res) => {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
         fullname: updatedUser.name,
+        profession: updatedUser.profession,
+        marital_status: updatedUser.marital_status,
         age: updatedUser.age,
         about: updatedUser.about,
         likes: updatedUser.likes,
@@ -162,18 +166,18 @@ export const updateProfile = async (req, res) => {
     console.log("req files to update profile image : ", req.files);
 
     // Handle file uploads if any
-    if (req.files.profile_image && req.files.profile_image[0]) {
-      const profilePath = req.files.profile_image[0].path.replace(/\\/g, "/"); // Fix Windows paths
+    if (req.files?.profile_image?.[0]) {
+      const filename = req.files.profile_image[0].filename;
       updateData.profile_image = `${req.protocol}://${req.get(
         "host"
-      )}/${profilePath}`;
+      )}/uploads/${filename}`;
     }
 
-    if (req.files.banner_image && req.files.banner_image[0]) {
-      const bannerPath = req.files.banner_image[0].path.replace(/\\/g, "/");
+    if (req.files?.banner_image?.[0]) {
+      const filename = req.files.banner_image[0].filename;
       updateData.cover_image = `${req.protocol}://${req.get(
         "host"
-      )}/${bannerPath}`;
+      )}/uploads/${filename}`;
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {

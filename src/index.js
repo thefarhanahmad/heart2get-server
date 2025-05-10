@@ -105,7 +105,7 @@ app.use((req, res) => {
 const server = http.createServer(app);
 export const io = new SocketServer(server, {
   cors: {
-    origin: "*", // adjust based on frontend domain
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
