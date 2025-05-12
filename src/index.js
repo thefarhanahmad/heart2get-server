@@ -181,6 +181,34 @@ io.on("connection", (socket) => {
     }
   });
 
+  // *******Video call sockets********
+
+  // Caller sends call request
+  socket.on("call-user", ({ from, to, channelName }) => {
+    const targetSocketId = onlineUsers.get(to);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("incoming-call", { from, channelName });
+    }
+  });
+
+  // Receiver accepts call
+  socket.on("accept-call", ({ from, to, channelName }) => {
+    const targetSocketId = onlineUsers.get(from);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-accepted", { to, channelName });
+    }
+  });
+
+  // Receiver rejects call
+  socket.on("reject-call", ({ from, to }) => {
+    const targetSocketId = onlineUsers.get(from);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-rejected", { to });
+    }
+  });
+
+  // VIDEO CALL SOCKET EVENTS
+
   socket.on("disconnect", () => {
     // Find which user disconnected
     for (const [userId, socketId] of onlineUsers.entries()) {
