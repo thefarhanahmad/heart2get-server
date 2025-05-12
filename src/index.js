@@ -71,7 +71,7 @@ app.use("/api/location", locationRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to the API" });
+  res.json({ message: "Dating ki API runing hai" });
 });
 
 // Global error handling middleware
