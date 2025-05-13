@@ -112,6 +112,7 @@ export const io = new SocketServer(server, {
 
 // Track online users
 const onlineUsers = new Map(); // userId -> socketId
+const activeCalls = new Map(); // userId -> callData
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -182,29 +183,96 @@ io.on("connection", (socket) => {
   });
 
   // *******Video call sockets********
+  // ********** Enhanced Video Call Sockets ********** //
+  socket.on("call-user", ({ from, to, channelName, callType = "video" }) => {
+    console.log(`[CALL] User ${from} calling ${to} in channel ${channelName}`);
 
-  // Caller sends call request
-  socket.on("call-user", ({ from, to, channelName }) => {
+    // Check if receiver is already in a call
+    if (activeCalls.has(to)) {
+      console.log(`[CALL BUSY] ${to} is already in a call`);
+      return socket.emit("call-busy", { to });
+    }
+
     const targetSocketId = onlineUsers.get(to);
     if (targetSocketId) {
-      io.to(targetSocketId).emit("incoming-call", { from, channelName });
+      // Track the call
+      activeCalls.set(to, { from, channelName, callType });
+      activeCalls.set(from, { to, channelName, callType });
+
+      console.log(`[CALL] Tracking call between ${from} and ${to}`);
+
+      io.to(targetSocketId).emit("incoming-call", {
+        from,
+        channelName,
+        callType,
+      });
+      console.log(`[CALL] Sent incoming-call to ${to}`);
+
+      // Add timeout for no response
+      setTimeout(() => {
+        if (activeCalls.has(to)) {
+          console.log(`[CALL TIMEOUT] No response from ${to}`);
+          io.to(socket.id).emit("call-timeout", { to });
+          activeCalls.delete(to);
+          activeCalls.delete(from);
+        }
+      }, 45000); // 45 seconds timeout
+    } else {
+      console.log(`[CALL FAILED] ${to} is offline`);
+      socket.emit("user-offline", { to });
     }
   });
 
-  // Receiver accepts call
   socket.on("accept-call", ({ from, to, channelName }) => {
+    console.log(`[CALL ACCEPT] ${from} accepting call from ${to}`);
+
     const targetSocketId = onlineUsers.get(from);
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("call-accepted", { to, channelName });
+    if (targetSocketId && activeCalls.has(from)) {
+      io.to(targetSocketId).emit("call-accepted", {
+        to,
+        channelName,
+        callData: activeCalls.get(from),
+      });
+      console.log(`[CALL ACCEPT] Notified ${from} that call was accepted`);
+    } else {
+      console.log(
+        `[CALL ACCEPT ERROR] ${from} not found or not in active call`
+      );
     }
   });
 
-  // Receiver rejects call
   socket.on("reject-call", ({ from, to }) => {
+    console.log(`[CALL REJECT] ${from} rejecting call from ${to}`);
+
     const targetSocketId = onlineUsers.get(from);
     if (targetSocketId) {
       io.to(targetSocketId).emit("call-rejected", { to });
+      console.log(`[CALL REJECT] Notified ${from} that call was rejected`);
+
+      // Clean up
+      activeCalls.delete(to);
+      activeCalls.delete(from);
+      console.log(`[CALL CLEANUP] Removed call tracking for ${from} and ${to}`);
     }
+  });
+
+  socket.on("end-call", ({ from, to }) => {
+    console.log(`[CALL END] ${from} ending call with ${to}`);
+
+    const otherUserId = from === socket.userId ? to : from;
+    const targetSocketId = onlineUsers.get(otherUserId);
+
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("call-ended", {
+        userId: socket.userId,
+      });
+      console.log(`[CALL END] Notified ${otherUserId} that call ended`);
+    }
+
+    // Clean up
+    activeCalls.delete(from);
+    activeCalls.delete(to);
+    console.log(`[CALL CLEANUP] Removed call tracking for ${from} and ${to}`);
   });
 
   // VIDEO CALL SOCKET EVENTS
@@ -214,6 +282,26 @@ io.on("connection", (socket) => {
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
         onlineUsers.delete(userId);
+        // Notify if they were in a call
+        if (activeCalls.has(userId)) {
+          const callData = activeCalls.get(userId);
+          const targetSocketId = onlineUsers.get(callData.to || callData.from);
+
+          if (targetSocketId) {
+            io.to(targetSocketId).emit("call-ended", {
+              userId,
+              reason: "disconnected",
+            });
+            console.log(`[CALL ENDED] ${userId} disconnected during call`);
+          }
+
+          // Clean up
+          activeCalls.delete(userId);
+          activeCalls.delete(callData.to || callData.from);
+          console.log(
+            `[CALL CLEANUP] Removed call tracking for disconnected user ${userId}`
+          );
+        }
         io.emit("userOffline", userId);
         console.log(`User ${userId} disconnected (Offline)`);
         break;
