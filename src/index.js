@@ -226,18 +226,24 @@ io.on("connection", (socket) => {
   socket.on("accept-call", ({ from, to, channelName }) => {
     console.log(`[CALL ACCEPT] ${from} accepting call from ${to}`);
 
-    const targetSocketId = onlineUsers.get(from);
-    if (targetSocketId && activeCalls.has(from)) {
+    const targetSocketId = onlineUsers.get(to);
+    if (targetSocketId && activeCalls.has(to)) {
+      // Update call state before notifying
+      activeCalls.set(from, { ...activeCalls.get(from), status: "accepted" });
+      activeCalls.set(to, { ...activeCalls.get(to), status: "accepted" });
+
       io.to(targetSocketId).emit("call-accepted", {
-        to,
+        from,
         channelName,
-        callData: activeCalls.get(from),
+        callData: activeCalls.get(to),
       });
-      console.log(`[CALL ACCEPT] Notified ${from} that call was accepted`);
+      console.log(`[CALL ACCEPT] Notified ${to} that call was accepted`);
     } else {
-      console.log(
-        `[CALL ACCEPT ERROR] ${from} not found or not in active call`
-      );
+      console.log(`[CALL ACCEPT ERROR] ${to} not found or not in active call`);
+      socket.emit("call-error", {
+        to: from,
+        message: "Call session expired",
+      });
     }
   });
 
