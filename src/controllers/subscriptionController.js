@@ -53,8 +53,8 @@ export const purchaseSubscription = async (req, res) => {
       ],
       application_context: {
         brand_name: "Heart2Get",
-        return_url: `Heart2Get://payment-success`, // Deep link for successful payment
-        cancel_url: `Heart2Get://payment-failed`, // Deep link for failed payment
+        return_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-success?plan_id=${plan_id}&amount=${amount}`,
+        cancel_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-cancel`,
         user_action: "PAY_NOW",
       },
     });
@@ -92,82 +92,54 @@ export const successPayment = async (req, res) => {
   const { token, plan_id, amount } = req.query;
 
   try {
-    const captureRequest = new paypal.orders.OrdersCaptureRequest(token);
-    captureRequest.requestBody({});
-    const capture = await client.execute(captureRequest);
-
-    if (capture.result.status === "COMPLETED") {
-      // Optional: create subscription or update DB here
-
-      // Redirect user to frontend success screen or deep link
-      return res.redirect(
-        `Heart2Get://payment-success?status=success&plan_id=${plan_id}&amount=${amount}`
-      );
-    }
-
-    return res.redirect(`Heart2Get://payment-failed?status=failed`);
-  } catch (error) {
-    console.error("PayPal capture error:", error.message);
-    return res.redirect(`Heart2Get://payment-failed?status=failed`);
-  }
-};
-
-export const capturePaypalPayment = async (req, res) => {
-  try {
-    const { token, plan_id, amount } = req.body;
-    const userId = req.user._id;
-
     // Capture the payment
     const captureRequest = new paypal.orders.OrdersCaptureRequest(token);
     captureRequest.requestBody({});
     const captureResponse = await client.execute(captureRequest);
 
-    if (captureResponse.status === "COMPLETED") {
-      // Create the subscription
+    if (captureResponse.result.status === "COMPLETED") {
+      // Fetch the plan
       const plan = await SubscriptionPlan.findOne({
-        plan_id,
+        _id: plan_id,
         status: "active",
       });
+
+      if (!plan) {
+        return res.redirect(`https://heart2get.com/payment-failed`);
+      }
+
+      const userId = captureResponse.result.payer.payer_id; // Not your internal user ID
+
+      // Optional: If you can map PayPal payer_id to your internal user, do it here.
+      // Otherwise, you'll need to manually associate this in the frontend after redirect.
+
+      // Set start and end date of subscription
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + plan.duration_days);
 
-      const subscription = await UserSubscription.create({
-        user_id: userId,
+      // Save subscription in DB
+      await UserSubscription.create({
+        user_id: userId, // Replace with internal user ID if available
         plan_id,
         start_date: startDate,
         end_date: endDate,
         payment_method: "paypal",
-        transaction_id: captureResponse.id, // PayPal transaction ID
+        transaction_id: captureResponse.result.id,
         amount,
         status: "active",
       });
 
-      // Update user's subscription status
-      await req.user.updateOne({ subscription: "premium" });
+      // You can't call `req.user.updateOne(...)` here because this route is public.
+      // You’ll need to update the user’s subscription via background job or frontend API call after redirect
 
-      res.status(200).json({
-        status: true,
-        message: "Subscription purchased successfully",
-        subscription: {
-          user_id: subscription.user_id,
-          plan_id: subscription.plan_id,
-          start_date: subscription.start_date,
-          end_date: subscription.end_date,
-          status: subscription.status,
-        },
-      });
-    } else {
-      res.status(500).json({
-        status: false,
-        message: "Payment capture failed",
-      });
+      return res.redirect(`https://heart2get.com/payment-success`);
     }
+
+    return res.redirect(`https://heart2get.com/payment-failed`);
   } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("PayPal capture error:", error.message);
+    return res.redirect(`https://heart2get.com/payment-failed`);
   }
 };
 

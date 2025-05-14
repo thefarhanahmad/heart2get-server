@@ -6,7 +6,6 @@ import {
   purchaseSubscription,
   getMySubscription,
   getSubscriptionHistory,
-  capturePaypalPayment,
   successPayment,
 } from "../controllers/subscriptionController.js";
 
@@ -20,7 +19,6 @@ router.use(protect);
 
 // Subscription routes
 router.post("/purchase", purchaseSubscription);
-router.post("/capture", capturePaypalPayment);
 router.get("/my-subscription", getMySubscription);
 router.get("/history", getSubscriptionHistory);
 
