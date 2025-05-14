@@ -17,6 +17,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import storyRoutes from "./routes/storyRoutes.js";
 import locationRoutes from "./routes/locationRoutes.js";
 import Message from "./models/chatModel.js";
+import { autoExpireSubscriptions } from "./utils/cronJobs.js";
 
 // Load environment variables
 dotenv.config();
@@ -315,6 +316,9 @@ io.on("connection", (socket) => {
     }
   });
 });
+
+// Cron Jobs expiring subscriptions
+autoExpireSubscriptions();
 
 // Start server
 server.listen(PORT, () => {

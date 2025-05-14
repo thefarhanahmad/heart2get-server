@@ -161,7 +161,7 @@ export const successPayment = async (req, res) => {
 
       // Step 5: Save subscription
       const newSub = await UserSubscription.create({
-        user_id: userId, // ⚠️ Replace with real user ID if you have it via session/token
+        user_id: userId,
         plan_id,
         start_date: startDate,
         end_date: endDate,
