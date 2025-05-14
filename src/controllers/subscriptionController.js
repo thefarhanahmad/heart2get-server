@@ -69,7 +69,7 @@ export const purchaseSubscription = async (req, res) => {
       ],
       application_context: {
         brand_name: "Heart2Get",
-        return_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-success?plan_id=${plan_id}&amount=${amount}`,
+        return_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-success?plan_id=${plan_id}&amount=${amount}&user_id=${userId}`,
         cancel_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-cancel`,
         user_action: "PAY_NOW",
       },
@@ -109,7 +109,7 @@ export const purchaseSubscription = async (req, res) => {
 };
 
 export const successPayment = async (req, res) => {
-  const { token, plan_id, amount } = req.query;
+  const { token, plan_id, amount, user_id } = req.query;
   console.log(
     "🔁 [SUCCESS PAYMENT] - Called with token:",
     token,
@@ -150,7 +150,7 @@ export const successPayment = async (req, res) => {
       }
 
       // Step 3: Get PayPal user ID (not your internal user ID!)
-      const userId = captureResponse?.result?.payer?.payer_id;
+      const userId = user_id;
       console.log("👤 PayPal Payer ID:", userId);
 
       // Step 4: Calculate subscription dates
