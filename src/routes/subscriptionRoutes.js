@@ -4,9 +4,8 @@ import { protect } from "../middleware/authMiddleware.js";
 import {
   getSubscriptionPlans,
   purchaseSubscription,
-  getMySubscription,
-  getSubscriptionHistory,
   successPayment,
+  getMyActiveSubscriptions,
 } from "../controllers/subscriptionController.js";
 
 const router = express.Router();
@@ -19,7 +18,6 @@ router.use(protect);
 
 // Subscription routes
 router.post("/purchase", purchaseSubscription);
-router.get("/my-subscription", getMySubscription);
-router.get("/history", getSubscriptionHistory);
+router.get("/my-subscription", getMyActiveSubscriptions);
 
 export default router;

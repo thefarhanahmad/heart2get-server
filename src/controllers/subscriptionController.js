@@ -186,70 +186,52 @@ export const successPayment = async (req, res) => {
   }
 };
 
-export const getMySubscription = async (req, res) => {
+export const getMyActiveSubscriptions = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const subscription = await UserSubscription.findOne({
+    const subscriptions = await UserSubscription.find({
       user_id: userId,
       status: "active",
-    }).lean();
-
-    if (!subscription) {
-      return res.status(200).json({
-        status: true,
-        subscription: null,
-      });
-    }
-
-    // Calculate days remaining
-    const now = new Date();
-    const endDate = new Date(subscription.end_date);
-    const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-
-    res.status(200).json({
-      status: true,
-      subscription: {
-        plan_id: subscription.plan_id,
-        start_date: subscription.start_date,
-        end_date: subscription.end_date,
-        status: subscription.status,
-        days_remaining: Math.max(0, daysRemaining),
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: false,
-      message: error.message,
-    });
-  }
-};
-
-export const getSubscriptionHistory = async (req, res) => {
-  try {
-    const userId = req.user._id;
-
-    const subscriptions = await UserSubscription.find({ user_id: userId })
+    })
       .sort({ createdAt: -1 })
       .lean();
 
-    const history = await Promise.all(
+    if (!subscriptions.length) {
+      return res.status(200).json({
+        status: true,
+        subscriptions: [],
+        message: "No active subscriptions found",
+      });
+    }
+
+    const activeDetails = await Promise.all(
       subscriptions.map(async (sub) => {
-        const plan = await SubscriptionPlan.findOne({ plan_id: sub.plan_id });
+        const plan = await SubscriptionPlan.findById(sub.plan_id); // ✅ FIXED HERE
+
+        const now = new Date();
+        const endDate = new Date(sub.end_date);
+        const daysRemaining = Math.ceil(
+          (endDate - now) / (1000 * 60 * 60 * 24)
+        );
+
         return {
           plan_name: plan?.name || "Unknown Plan",
+          plan_id: sub.plan_id,
           price: sub.amount,
-          purchased_on: sub.start_date,
-          expires_on: sub.end_date,
+          start_date: sub.start_date,
+          end_date: sub.end_date,
+          days_remaining: Math.max(0, daysRemaining),
           payment_method: sub.payment_method,
           transaction_id: sub.transaction_id,
+          features: plan?.features || [],
         };
       })
     );
 
     res.status(200).json({
       status: true,
-      history,
+      subscriptions: activeDetails,
     });
   } catch (error) {
     res.status(500).json({
