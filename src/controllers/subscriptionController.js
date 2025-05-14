@@ -51,6 +51,12 @@ export const purchaseSubscription = async (req, res) => {
           },
         },
       ],
+      application_context: {
+        brand_name: "Heart2Get",
+        return_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-success?plan_id=${plan_id}&amount=${amount}`,
+        cancel_url: `https://heart2get-server.onrender.com/api/subscriptions/paypal-cancel`,
+        user_action: "PAY_NOW",
+      },
     });
 
     const order = await client.execute(orderRequest);
@@ -79,6 +85,28 @@ export const purchaseSubscription = async (req, res) => {
       status: false,
       message: error.message,
     });
+  }
+};
+
+export const successPayment = async (req, res) => {
+  const { token, plan_id, amount } = req.query;
+
+  try {
+    const captureRequest = new paypal.orders.OrdersCaptureRequest(token);
+    captureRequest.requestBody({});
+    const capture = await client.execute(captureRequest);
+
+    if (capture.result.status === "COMPLETED") {
+      // Optional: create subscription or update DB here
+
+      // Redirect user to frontend success screen
+      return res.redirect(`https://heart2get.com/payment-success`); // Or use deep link like myapp://success
+    }
+
+    return res.redirect(`https://heart2get.com/payment-failed`);
+  } catch (error) {
+    console.error("PayPal capture error:", error.message);
+    return res.redirect(`https://heart2get.com/payment-failed`);
   }
 };
 
