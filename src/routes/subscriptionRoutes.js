@@ -1,13 +1,13 @@
-import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
-import { validateRequest } from '../middleware/validationMiddleware.js';
-import { purchaseSubscriptionSchema } from '../validations/subscriptionValidation.js';
+import express from "express";
+import { protect } from "../middleware/authMiddleware.js";
+
 import {
   getSubscriptionPlans,
   purchaseSubscription,
   getMySubscription,
-  getSubscriptionHistory
-} from '../controllers/subscriptionController.js';
+  getSubscriptionHistory,
+  capturePaypalPayment,
+} from "../controllers/subscriptionController.js";
 
 const router = express.Router();
 
@@ -15,9 +15,10 @@ const router = express.Router();
 router.use(protect);
 
 // Subscription routes
-router.get('/plans', getSubscriptionPlans);
-router.post('/purchase', validateRequest(purchaseSubscriptionSchema), purchaseSubscription);
-router.get('/status', getMySubscription);
-router.get('/history', getSubscriptionHistory);
+router.get("/plans", getSubscriptionPlans);
+router.post("/purchase", purchaseSubscription);
+router.post("/capture", capturePaypalPayment);
+router.get("/my-subscription", getMySubscription);
+router.get("/history", getSubscriptionHistory);
 
 export default router;
