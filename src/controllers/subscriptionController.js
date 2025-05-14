@@ -26,28 +26,44 @@ export const purchaseSubscription = async (req, res) => {
     const { plan_id, amount } = req.body;
     const userId = req.user._id;
 
-    // Find the plan
+    console.log("🛒 [PURCHASE SUBSCRIPTION] Called by user:", userId);
+    console.log("📦 Requested Plan ID:", plan_id, "💵 Amount:", amount);
+
+    // Step 1: Find the plan
     const plan = await SubscriptionPlan.findOne({
       _id: plan_id,
       status: "active",
     });
+
     if (!plan) {
+      console.log("❌ Plan not found or inactive:", plan_id);
       return res.status(404).json({
         status: false,
         message: "Subscription plan not found",
       });
     }
 
-    // Create PayPal payment (order)
+    console.log(
+      "✅ Plan found:",
+      plan.name,
+      "- Duration (days):",
+      plan.duration_days
+    );
+
+    // Step 2: Create PayPal payment order
     const orderRequest = new paypal.orders.OrdersCreateRequest();
     orderRequest.prefer("return=representation");
+
+    const formattedAmount = parseFloat(amount).toFixed(2);
+    console.log("📤 Creating PayPal order with amount:", formattedAmount);
+
     orderRequest.requestBody({
       intent: "CAPTURE",
       purchase_units: [
         {
           amount: {
             currency_code: "USD",
-            value: amount.toFixed(2), // Specify the subscription amount
+            value: formattedAmount,
           },
         },
       ],
@@ -60,13 +76,14 @@ export const purchaseSubscription = async (req, res) => {
     });
 
     const order = await client.execute(orderRequest);
-    console.log("order is : ", order);
+    console.log("✅ PayPal order created:", JSON.stringify(order, null, 2));
 
-    // Redirect to PayPal for approval
+    // Step 3: Extract approval URL
     if (order.result.status === "CREATED") {
       const approvalUrl = order.result.links.find(
         (link) => link.rel === "approve"
-      ).href;
+      )?.href;
+      console.log("🔗 Approval URL:", approvalUrl);
 
       return res.status(200).json({
         status: true,
@@ -76,12 +93,15 @@ export const purchaseSubscription = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    console.log("❗ Unexpected order status:", order.result.status);
+    return res.status(500).json({
       status: false,
       message: "Unable to create PayPal payment order.",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("💥 Error in purchaseSubscription:", error.message);
+    console.error("📛 Full error:", error);
+    return res.status(500).json({
       status: false,
       message: error.message,
     });
@@ -90,37 +110,58 @@ export const purchaseSubscription = async (req, res) => {
 
 export const successPayment = async (req, res) => {
   const { token, plan_id, amount } = req.query;
+  console.log(
+    "🔁 [SUCCESS PAYMENT] - Called with token:",
+    token,
+    "plan_id:",
+    plan_id,
+    "amount:",
+    amount
+  );
 
   try {
-    // Capture the payment
+    // Step 1: Capture the payment from PayPal
     const captureRequest = new paypal.orders.OrdersCaptureRequest(token);
     captureRequest.requestBody({});
-    const captureResponse = await client.execute(captureRequest);
+    console.log("📤 Sending capture request to PayPal...");
 
-    if (captureResponse.result.status === "COMPLETED") {
-      // Fetch the plan
+    const captureResponse = await client.execute(captureRequest);
+    console.log(
+      "✅ PayPal capture response received:",
+      JSON.stringify(captureResponse, null, 2)
+    );
+
+    const paymentStatus = captureResponse?.result?.status;
+    console.log("💳 Payment status:", paymentStatus);
+
+    if (paymentStatus === "COMPLETED") {
+      console.log("🎉 Payment COMPLETED. Proceeding with subscription...");
+
+      // Step 2: Find the subscription plan
       const plan = await SubscriptionPlan.findOne({
         _id: plan_id,
         status: "active",
       });
+      console.log("📦 Plan lookup result:", plan);
 
       if (!plan) {
+        console.log("❌ Plan not found or inactive.");
         return res.redirect(`https://heart2get.com/payment-failed`);
       }
 
-      const userId = captureResponse.result.payer.payer_id; // Not your internal user ID
+      // Step 3: Get PayPal user ID (not your internal user ID!)
+      const userId = captureResponse?.result?.payer?.payer_id;
+      console.log("👤 PayPal Payer ID:", userId);
 
-      // Optional: If you can map PayPal payer_id to your internal user, do it here.
-      // Otherwise, you'll need to manually associate this in the frontend after redirect.
-
-      // Set start and end date of subscription
+      // Step 4: Calculate subscription dates
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + plan.duration_days);
+      console.log("📅 Subscription period:", startDate, "→", endDate);
 
-      // Save subscription in DB
-      await UserSubscription.create({
-        user_id: userId, // Replace with internal user ID if available
+      // Step 5: Save subscription
+      const newSub = await UserSubscription.create({
+        user_id: userId, // ⚠️ Replace with real user ID if you have it via session/token
         plan_id,
         start_date: startDate,
         end_date: endDate,
@@ -129,16 +170,18 @@ export const successPayment = async (req, res) => {
         amount,
         status: "active",
       });
+      console.log("📝 Subscription saved:", newSub);
 
-      // You can't call `req.user.updateOne(...)` here because this route is public.
-      // You’ll need to update the user’s subscription via background job or frontend API call after redirect
-
+      // Step 6: Redirect to success page
       return res.redirect(`https://heart2get.com/payment-success`);
     }
 
+    // If not completed (e.g., PENDING, IN_PROGRESS, etc.)
+    console.log("❗ Payment not completed. Status:", paymentStatus);
     return res.redirect(`https://heart2get.com/payment-failed`);
   } catch (error) {
-    console.error("PayPal capture error:", error.message);
+    console.error("💥 PayPal capture error:", error.message);
+    console.error("📛 Full error object:", error);
     return res.redirect(`https://heart2get.com/payment-failed`);
   }
 };
