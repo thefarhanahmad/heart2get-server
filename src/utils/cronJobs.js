@@ -6,7 +6,7 @@ export const autoExpireSubscriptions = () => {
     console.log("⏰ Running subscription expiry check...");
 
     const now = new Date();
-
+// its fine
     try {
       const result = await UserSubscription.updateMany(
         {
