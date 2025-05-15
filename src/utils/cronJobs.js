@@ -1,12 +1,12 @@
 import cron from "node-cron";
-import UserSubscription from "../models/userSubscriptionModel";
+import UserSubscription from "../models/userSubscriptionModel.js";
 
 export const autoExpireSubscriptions = () => {
   cron.schedule("0 * * * *", async () => {
     console.log("⏰ Running subscription expiry check...");
 
     const now = new Date();
-// its fine
+    // its fine
     try {
       const result = await UserSubscription.updateMany(
         {
