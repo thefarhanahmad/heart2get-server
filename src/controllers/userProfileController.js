@@ -41,7 +41,7 @@ export const setupProfile = async (req, res) => {
       profile: {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
-        fullname: updatedUser.name,
+        name: updatedUser.name,
         country_code: updatedUser.country_code,
         profession: updatedUser.profession,
         marital_status: updatedUser.marital_status,
