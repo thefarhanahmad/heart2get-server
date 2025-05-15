@@ -6,6 +6,7 @@ export const setupProfile = async (req, res) => {
     const profileData = {
       name: req.body.name,
       email: req.body.email,
+      country_code: req.body.country_code,
       i_am: req.body.i_am,
       interested_in: req.body.interested_in,
       age: req.body.age,
@@ -41,6 +42,7 @@ export const setupProfile = async (req, res) => {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
         fullname: updatedUser.name,
+        country_code: country_code,
         profession: updatedUser.profession,
         marital_status: updatedUser.marital_status,
         age: updatedUser.age,
@@ -144,6 +146,7 @@ export const updateProfile = async (req, res) => {
       "email",
       "mobile",
       "i_am",
+      "country_code",
       "interested_in",
       "age",
       "about",
