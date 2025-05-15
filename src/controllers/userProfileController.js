@@ -42,7 +42,7 @@ export const setupProfile = async (req, res) => {
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
         fullname: updatedUser.name,
-        country_code: country_code,
+        country_code: updatedUser.country_code,
         profession: updatedUser.profession,
         marital_status: updatedUser.marital_status,
         age: updatedUser.age,

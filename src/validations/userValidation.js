@@ -91,6 +91,7 @@ export const updateUserSchema = Joi.object({
     .messages({
       "string.pattern.base": "Please enter a valid mobile number",
     }),
+  country_code: Joi.string(),
   i_am: Joi.string().valid("Male", "Female", "Other").messages({
     "any.only": "Gender must be either Male, Female, or Other",
   }),
