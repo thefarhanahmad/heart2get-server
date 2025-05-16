@@ -200,8 +200,6 @@ const userSchema = new mongoose.Schema(
       },
       reports: [reportSchema],
     },
-    otp: { type: String },
-    otpExpiry: { type: Date },
   },
   {
     timestamps: true,
