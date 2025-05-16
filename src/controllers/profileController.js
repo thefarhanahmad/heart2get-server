@@ -16,7 +16,7 @@ export const getProfile = async (req, res) => {
       status: true,
       profile: {
         id: user._id,
-        fullname: user.name,
+        name: user.name,
         email: user.email,
         mobile: user.mobile,
         about: user.about,
