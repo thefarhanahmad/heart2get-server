@@ -4,7 +4,6 @@ export const setupProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const profileData = {
-      _id: updatedUser._id,
       name: req.body.name,
       email: req.body.email,
       country_code: req.body.country_code,
@@ -40,6 +39,7 @@ export const setupProfile = async (req, res) => {
       status: true,
       message: "Profile updated successfully",
       profile: {
+        _id: updatedUser._id,
         i_am: updatedUser.i_am,
         interested_in: updatedUser.interested_in,
         name: updatedUser.name,
