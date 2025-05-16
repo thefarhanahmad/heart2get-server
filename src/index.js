@@ -161,7 +161,7 @@ io.on("connection", (socket) => {
       senderId,
     });
     try {
-      const updated = await Message.findByIdAndUpdate(
+      const updated = await Message.findOneAndUpdate(
         {
           _id: messageId,
           sender_id: senderId,
