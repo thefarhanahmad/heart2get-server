@@ -27,6 +27,7 @@
     "nodemailer": "^7.0.2",
     "paypal-rest-sdk": "^1.8.1",
     "socket.io": "^4.8.1",
+    "twilio": "^5.6.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
