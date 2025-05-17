@@ -12,11 +12,18 @@ export const getProfile = async (req, res) => {
       });
     }
 
+    // Total people the user liked
+    const totalLiked = user.likedUsers?.length || 0;
+
     // Match count logic
     const mutualMatches = await User.countDocuments({
       _id: { $in: user.likedUsers },
       likedUsers: req.user._id,
     });
+
+    // Calculate response percentage
+    const responsePercentage =
+      totalLiked > 0 ? Math.round((mutualMatches / totalLiked) * 100) : 0;
 
     res.status(200).json({
       status: true,
@@ -43,6 +50,7 @@ export const getProfile = async (req, res) => {
         profession: user.profession,
         marital_status: user.marital_status,
         matchCount: mutualMatches,
+        response: responsePercentage,
       },
     });
   } catch (error) {
