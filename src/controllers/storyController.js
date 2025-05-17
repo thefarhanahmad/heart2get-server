@@ -24,8 +24,9 @@ export const createStory = async (req, res) => {
     }
 
     // Generate media URL
-    const mediaUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename
-      }`;
+    const mediaUrl = `${req.protocol}://${req.get("host")}/uploads/${
+      req.file.filename
+    }`;
 
     const story = await Story.create({
       user_id: userId,
@@ -56,10 +57,25 @@ export const getAllStories = async (req, res) => {
     const userId = req.user._id;
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // ✅ Step 1: Fetch current user with likedUsers and likedBy
+    const currentUser = await User.findById(userId)
+      .select("likedUsers likedBy")
+      .lean();
+
+    // ✅ Step 2: Get mutual matches — users who are in both likedUsers and likedBy
+    const likedUsers = currentUser.likedUsers.map((id) => id.toString());
+    const likedBy = currentUser.likedBy.map((id) => id.toString());
+
+    const mutualMatches = likedUsers.filter((id) => likedBy.includes(id));
+
+    // Include current user's ID to fetch their own stories too
+    mutualMatches.push(userId.toString());
+
     // Fetch all active stories in the last 24 hours
     const stories = await Story.find({
       createdAt: { $gte: oneDayAgo },
       status: "active",
+      user_id: { $in: mutualMatches },
     })
       .populate("user_id", "name profile_image")
       .sort("-createdAt")
