@@ -12,6 +12,12 @@ export const getProfile = async (req, res) => {
       });
     }
 
+    // Match count logic
+    const mutualMatches = await User.countDocuments({
+      _id: { $in: user.likedUsers },
+      likedUsers: req.user._id,
+    });
+
     res.status(200).json({
       status: true,
       profile: {
@@ -36,6 +42,7 @@ export const getProfile = async (req, res) => {
         status: user.status,
         profession: user.profession,
         marital_status: user.marital_status,
+        matchCount: mutualMatches,
       },
     });
   } catch (error) {
