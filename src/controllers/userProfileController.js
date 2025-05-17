@@ -256,3 +256,135 @@ export const getUserDetails = async (req, res) => {
     });
   }
 };
+
+// Like and matching controllers
+export const likeUser = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const { userIdToLike } = req.body;
+
+    if (currentUserId === userIdToLike) {
+      return res.status(400).json({ message: "You cannot like yourself." });
+    }
+
+    const [user, userToLike] = await Promise.all([
+      User.findById(currentUserId),
+      User.findById(userIdToLike),
+    ]);
+
+    if (!user || !userToLike) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Update likedUsers if not already liked
+    const alreadyLiked = user.likedUsers.includes(userIdToLike);
+    if (!alreadyLiked) {
+      user.likedUsers.push(userIdToLike);
+      await user.save();
+    }
+
+    // Update likedBy for the other user if not already added
+    const alreadyInLikedBy = userToLike.likedBy.includes(currentUserId);
+    if (!alreadyInLikedBy) {
+      userToLike.likedBy.push(currentUserId);
+      await userToLike.save();
+    }
+
+    // Check for match (mutual like)
+    const isMutual = userToLike.likedUsers.includes(currentUserId);
+
+    res.status(200).json({
+      message: isMutual ? "It's a match!" : "User liked successfully.",
+      match: isMutual,
+    });
+  } catch (error) {
+    console.error("likeUser error:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const getAllMatchedUsers = async (req, res) => {
+  console.log("hit getAllMatches");
+  try {
+    const currentUserId = req.user.id;
+
+    // Get current user with interests and hobbies
+    const currentUser = await User.findById(currentUserId)
+      .populate("likedUsers interests")
+      .lean();
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Find mutual likes
+    const matchedUsers = await User.find({
+      _id: { $in: currentUser.likedUsers.map((u) => u._id || u) },
+      likedUsers: currentUserId,
+    })
+      .populate("address interests")
+      .lean();
+
+    // Format with match percentage
+    const formattedMatches = matchedUsers.map((match) => {
+      let matchScore = 0;
+
+      // 1. Gender compatibility
+      const genderMatch =
+        currentUser.interested_in === "Both" ||
+        currentUser.interested_in === match.i_am;
+      const reverseGenderMatch =
+        match.interested_in === "Both" ||
+        match.interested_in === currentUser.i_am;
+      if (genderMatch && reverseGenderMatch) matchScore += 20;
+
+      // 2. Shared interests
+      const sharedInterests = currentUser.interests?.filter((i) =>
+        match.interests?.some((m) => m.toString() === i.toString())
+      );
+      if (sharedInterests?.length > 0) matchScore += 20;
+
+      // 3. Shared hobbies
+      const sharedHobbies = currentUser.hobbies?.filter((hobby) =>
+        match.hobbies?.includes(hobby)
+      );
+      if (sharedHobbies?.length > 0) matchScore += 20;
+
+      // 4. Same category
+      if (
+        currentUser.category &&
+        match.category &&
+        currentUser.category === match.category
+      ) {
+        matchScore += 20;
+      }
+
+      // 5. Same country
+      const currentCountry = currentUser.address?.country?.toLowerCase();
+      const matchCountry = match.address?.country?.toLowerCase();
+      if (currentCountry && matchCountry && currentCountry === matchCountry) {
+        matchScore += 20;
+      }
+
+      return {
+        id: match._id,
+        name: match.name,
+        age: match.age,
+        country: match.address?.country || "",
+        city: match.address?.city || "",
+        profile_image: match.profile_image,
+        about: match.about,
+        category: match.category,
+        match_percentage: matchScore,
+      };
+    });
+
+    res.status(200).json({
+      matches: formattedMatches,
+      count: formattedMatches.length,
+    });
+  } catch (error) {
+    console.error("getAllMatchedUsers error:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};

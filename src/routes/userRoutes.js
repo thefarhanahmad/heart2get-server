@@ -19,6 +19,8 @@ import {
   getMatches,
   updateProfile,
   getUserDetails,
+  likeUser,
+  getAllMatchedUsers,
 } from "../controllers/userProfileController.js";
 import {
   createSupportTicket,
@@ -38,10 +40,10 @@ const storage = multer.diskStorage({
     cb(
       null,
       file.fieldname +
-      "-" +
-      uniqueSuffix +
-      "." +
-      file.originalname.split(".").pop()
+        "-" +
+        uniqueSuffix +
+        "." +
+        file.originalname.split(".").pop()
     );
   },
 });
@@ -81,6 +83,8 @@ router.put(
   updateProfile
 );
 router.get("/matches", getMatches);
+router.post("/like-user", likeUser);
+router.get("/get-matched-users", getAllMatchedUsers);
 router.get("/details/:id", getUserDetails);
 
 // Basic user routes

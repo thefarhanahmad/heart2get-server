@@ -1,20 +1,20 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const matchedUserSchema = new mongoose.Schema(
-  {
-    id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    name: {
-      type: String,
-      required: true,
-    },
-  },
-  { _id: false }
-);
+// const matchedUserSchema = new mongoose.Schema(
+//   {
+//     id: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "User",
+//       required: true,
+//     },
+//     name: {
+//       type: String,
+//       required: true,
+//     },
+//   },
+//   { _id: false }
+// );
 
 const reportSchema = new mongoose.Schema(
   {
@@ -186,13 +186,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    match_list: {
-      matched_count: {
-        type: Number,
-        default: 0,
-      },
-      matched_users: [matchedUserSchema],
-    },
+    likedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     report: {
       reported_count: {
         type: Number,
@@ -200,6 +195,8 @@ const userSchema = new mongoose.Schema(
       },
       reports: [reportSchema],
     },
+    otp: { type: String },
+    otpExpiry: { type: Date },
   },
   {
     timestamps: true,
