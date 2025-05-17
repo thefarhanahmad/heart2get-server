@@ -69,7 +69,7 @@ export const setupProfile = async (req, res) => {
 
 export const getMatches = async (req, res) => {
   try {
-    const { category, age_min, age_max, city } = req.query; // <-- city liya hai
+    const { category, age_min, age_max, city } = req.query;
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -77,7 +77,10 @@ export const getMatches = async (req, res) => {
     }
 
     const query = {
-      _id: { $ne: req.user.id }, // apne aap ko exclude
+      _id: {
+        $ne: req.user.id,
+        $nin: user.likedUsers,
+      },
       status: "active",
       i_am:
         user.interested_in === "Both"
