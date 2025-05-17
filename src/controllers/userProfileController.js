@@ -213,39 +213,78 @@ export const updateProfile = async (req, res) => {
 // Get User Details by ID
 export const getUserDetails = async (req, res) => {
   try {
-    const userId = req.params.id; // Get user ID from the URL params
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
 
-    // Fetch the user from the database by ID
-    const user = await User.findById(userId).lean().populate("interests");
+    // Fetch both users from DB
+    const [currentUser, targetUser] = await Promise.all([
+      User.findById(currentUserId).lean().populate("interests"),
+      User.findById(targetUserId).lean().populate("interests"),
+    ]);
 
-    // If user not found, return a 404 response
-    if (!user) {
+    if (!targetUser) {
       return res.status(404).json({
         status: false,
         message: "User not found",
       });
     }
 
-    // Return the user data as response
+    let matchScore = 0;
+
+    // Match criteria
+    const genderMatch =
+      currentUser.interested_in === "Both" ||
+      currentUser.interested_in === targetUser.i_am;
+    const reverseGenderMatch =
+      targetUser.interested_in === "Both" ||
+      targetUser.interested_in === currentUser.i_am;
+    if (genderMatch && reverseGenderMatch) matchScore += 20;
+
+    const sharedInterests = currentUser.interests?.filter((i) =>
+      targetUser.interests?.some((t) => t._id.toString() === i._id.toString())
+    );
+    if (sharedInterests?.length > 0) matchScore += 20;
+
+    const sharedHobbies = currentUser.hobbies?.filter((hobby) =>
+      targetUser.hobbies?.includes(hobby)
+    );
+    if (sharedHobbies?.length > 0) matchScore += 20;
+
+    if (
+      currentUser.category &&
+      targetUser.category &&
+      currentUser.category === targetUser.category
+    ) {
+      matchScore += 20;
+    }
+
+    const currentCountry = currentUser.address?.country?.toLowerCase();
+    const targetCountry = targetUser.address?.country?.toLowerCase();
+    if (currentCountry && targetCountry && currentCountry === targetCountry) {
+      matchScore += 20;
+    }
+
+    // Return target user with match score
     res.status(200).json({
       status: true,
       message: "User details fetched successfully",
       user: {
-        id: user._id,
-        i_am: user.i_am,
-        name: user.name,
-        email: user.email,
-        age: user.age,
-        about: user.about,
-        interests: user.interests,
-        hobbies: user.hobbies,
-        profile_image: user.profile_image,
-        category: user.category,
-        address: user.address,
-        likes: user.likes,
-        skin_color: user.skin_color,
-        height: user.height,
-        weight: user.weight,
+        id: targetUser._id,
+        i_am: targetUser.i_am,
+        name: targetUser.name,
+        email: targetUser.email,
+        age: targetUser.age,
+        about: targetUser.about,
+        interests: targetUser.interests,
+        hobbies: targetUser.hobbies,
+        profile_image: targetUser.profile_image,
+        category: targetUser.category,
+        address: targetUser.address,
+        likes: targetUser.likes,
+        skin_color: targetUser.skin_color,
+        height: targetUser.height,
+        weight: targetUser.weight,
+        match_percentage: matchScore, // 🎯 Added here
       },
     });
   } catch (error) {
