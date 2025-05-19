@@ -206,6 +206,7 @@ io.on("connection", (socket) => {
 
       io.to(targetSocketId).emit("incoming-call", {
         from,
+        to,
         channelName,
         callType,
       });
@@ -285,7 +286,6 @@ io.on("connection", (socket) => {
   });
 
   // VIDEO CALL SOCKET EVENTS
-
   socket.on("disconnect", () => {
     // Find which user disconnected
     for (const [userId, socketId] of onlineUsers.entries()) {
