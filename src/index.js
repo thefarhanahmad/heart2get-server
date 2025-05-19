@@ -188,6 +188,8 @@ io.on("connection", (socket) => {
   socket.on("call-user", ({ from, to, channelName, callType = "video" }) => {
     console.log(`[CALL] User ${from} calling ${to} in channel ${channelName}`);
 
+    console.log("active calls in socket : ", activeCalls);
+
     // Check if receiver is already in a call
     if (activeCalls.has(to)) {
       console.log(`[CALL BUSY] ${to} is already in a call`);
