@@ -230,20 +230,23 @@ io.on("connection", (socket) => {
   socket.on("accept-call", ({ from, to, channelName }) => {
     console.log(`[CALL ACCEPT] ${from} accepting call from ${to}`);
 
-    const targetSocketId = onlineUsers.get(to);
-    if (targetSocketId && activeCalls.has(to)) {
-      // Update call state before notifying
+    const callerSocketId = onlineUsers.get(to);
+    if (callerSocketId && activeCalls.has(to)) {
       activeCalls.set(from, { ...activeCalls.get(from), status: "accepted" });
       activeCalls.set(to, { ...activeCalls.get(to), status: "accepted" });
 
-      io.to(targetSocketId).emit("call-accepted", {
-        from,
+      io.to(callerSocketId).emit("call-accepted", {
+        from, // receiver's ID
         channelName,
         callData: activeCalls.get(to),
       });
-      console.log(`[CALL ACCEPT] Notified ${to} that call was accepted`);
+      console.log(
+        `[CALL ACCEPT] Notified caller (${to}) that call was accepted`
+      );
     } else {
-      console.log(`[CALL ACCEPT ERROR] ${to} not found or not in active call`);
+      console.log(
+        `[CALL ACCEPT ERROR] Caller (${to}) not found or call expired`
+      );
       socket.emit("call-error", {
         to: from,
         message: "Call session expired",
@@ -254,10 +257,12 @@ io.on("connection", (socket) => {
   socket.on("reject-call", ({ from, to }) => {
     console.log(`[CALL REJECT] ${from} rejecting call from ${to}`);
 
-    const targetSocketId = onlineUsers.get(from);
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("call-rejected", { to });
-      console.log(`[CALL REJECT] Notified ${from} that call was rejected`);
+    const callerSocketId = onlineUsers.get(to);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit("call-rejected", { from });
+      console.log(
+        `[CALL REJECT] Notified caller (${to}) that call was rejected`
+      );
 
       // Clean up
       activeCalls.delete(to);
