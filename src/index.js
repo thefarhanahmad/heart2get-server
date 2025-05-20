@@ -184,7 +184,6 @@ io.on("connection", (socket) => {
   });
 
   // *******Video call sockets********
-  // ********** Enhanced Video Call Sockets ********** //
   socket.on("call-user", ({ from, to, channelName, callType = "video" }) => {
     console.log(`[CALL] User ${from} calling ${to} in channel ${channelName}`);
 
@@ -231,9 +230,11 @@ io.on("connection", (socket) => {
     console.log(`[CALL ACCEPT] ${from} accepting call from ${to}`);
 
     const callerSocketId = onlineUsers.get(to);
+    console.log(`[CALL ACCEPT] Caller socket id:`, callerSocketId);
     if (callerSocketId && activeCalls.has(to)) {
       activeCalls.set(from, { ...activeCalls.get(from), status: "accepted" });
       activeCalls.set(to, { ...activeCalls.get(to), status: "accepted" });
+      console.log(`[CALL ACCEPT] Updated activeCalls for both users`);
 
       io.to(callerSocketId).emit("call-accepted", {
         from, // receiver's ID
