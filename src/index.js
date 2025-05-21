@@ -113,7 +113,7 @@ export const io = new SocketServer(server, {
 
 // Track online users
 const onlineUsers = new Map(); // userId -> socketId
-const activeCalls = new Map(); // userId -> callData
+const pendingInvitations = new Map();
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -183,140 +183,106 @@ io.on("connection", (socket) => {
     }
   });
 
-  // *******Video call sockets********
-  socket.on("call-user", ({ from, to, channelName, callType = "video" }) => {
-    console.log(`[CALL] User ${from} calling ${to} in channel ${channelName}`);
-
-    console.log("active calls in socket : ", activeCalls);
-
-    // Check if receiver is already in a call
-    if (activeCalls.has(to)) {
-      console.log(`[CALL BUSY] ${to} is already in a call`);
-      return socket.emit("call-busy", { to });
+  // GAMING SOCKETS
+  // Game invitation handler
+  socket.on("sendGameInvite", ({ senderId, recipientId }) => {
+    // Validate users
+    if (!onlineUsers.has(recipientId)) {
+      socket.emit("inviteError", {
+        error: "User is currently offline",
+        recipientId,
+      });
+      return;
     }
 
-    const targetSocketId = onlineUsers.get(to);
-    if (targetSocketId) {
-      // Track the call
-      activeCalls.set(to, { from, channelName, callType });
-      activeCalls.set(from, { to, channelName, callType });
+    // Create invitation
+    const invitationId = `invite_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    const invitation = {
+      invitationId,
+      senderId,
+      recipientId,
+      timestamp: Date.now(),
+      status: "pending",
+    };
 
-      console.log(`[CALL] Tracking call between ${from} and ${to}`);
+    // Store invitation
+    pendingInvitations.set(invitationId, invitation);
 
-      io.to(targetSocketId).emit("incoming-call", {
-        from,
-        to,
-        channelName,
-        callType,
-      });
-      console.log(`[CALL] Sent incoming-call to ${to}`);
+    // Send invitation to recipient
+    const recipientSocketId = onlineUsers.get(recipientId);
+    io.to(recipientSocketId).emit("receiveGameInvite", invitation);
 
-      // Add timeout for no response
-      setTimeout(() => {
-        if (activeCalls.has(to)) {
-          console.log(`[CALL TIMEOUT] No response from ${to}`);
-          io.to(socket.id).emit("call-timeout", { to });
-          activeCalls.delete(to);
-          activeCalls.delete(from);
+    // Confirm to sender
+    socket.emit("inviteSent", invitation);
+
+    // Set timeout for expiration (e.g., 30 seconds)
+    setTimeout(() => {
+      if (pendingInvitations.get(invitationId)?.status === "pending") {
+        pendingInvitations.delete(invitationId);
+        io.to(socket.id).emit("inviteExpired", { invitationId });
+        if (onlineUsers.has(recipientId)) {
+          io.to(onlineUsers.get(recipientId)).emit("inviteExpired", {
+            invitationId,
+          });
         }
-      }, 45000); // 45 seconds timeout
-    } else {
-      console.log(`[CALL FAILED] ${to} is offline`);
-      socket.emit("user-offline", { to });
-    }
+      }
+    }, 30000);
   });
 
-  socket.on("accept-call", ({ from, to, channelName }) => {
-    console.log(`[CALL ACCEPT] ${from} accepting call from ${to}`);
+  // Invitation response handler
+  socket.on("respondToInvite", ({ invitationId, recipientId, accepted }) => {
+    const invitation = pendingInvitations.get(invitationId);
 
-    const callerSocketId = onlineUsers.get(to);
-    console.log(`[CALL ACCEPT] Caller socket id:`, callerSocketId);
-    if (callerSocketId && activeCalls.has(to)) {
-      activeCalls.set(from, { ...activeCalls.get(from), status: "accepted" });
-      activeCalls.set(to, { ...activeCalls.get(to), status: "accepted" });
-      console.log(`[CALL ACCEPT] Updated activeCalls for both users`);
-
-      io.to(callerSocketId).emit("call-accepted", {
-        from, // receiver's ID
-        channelName,
-        callData: activeCalls.get(to),
-      });
-      console.log(
-        `[CALL ACCEPT] Notified caller (${to}) that call was accepted`
-      );
-    } else {
-      console.log(
-        `[CALL ACCEPT ERROR] Caller (${to}) not found or call expired`
-      );
-      socket.emit("call-error", {
-        to: from,
-        message: "Call session expired",
-      });
+    // Validate invitation
+    if (!invitation || invitation.recipientId !== recipientId) {
+      socket.emit("inviteError", { error: "Invalid invitation" });
+      return;
     }
-  });
 
-  socket.on("reject-call", ({ from, to }) => {
-    console.log(`[CALL REJECT] ${from} rejecting call from ${to}`);
+    // Update status
+    invitation.status = accepted ? "accepted" : "rejected";
+    pendingInvitations.set(invitationId, invitation);
 
-    const callerSocketId = onlineUsers.get(to);
-    if (callerSocketId) {
-      io.to(callerSocketId).emit("call-rejected", { from });
-      console.log(
-        `[CALL REJECT] Notified caller (${to}) that call was rejected`
-      );
+    // Notify both parties
+    const senderSocketId = onlineUsers.get(invitation.senderId);
+
+    if (accepted) {
+      // Create game session
+      const gameSessionId = `quiz_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      // Notify both players with game session details
+      io.to(senderSocketId).emit("inviteAccepted", {
+        invitationId,
+        gameSessionId,
+        opponentId: recipientId,
+      });
+
+      socket.emit("inviteAccepted", {
+        invitationId,
+        gameSessionId,
+        opponentId: invitation.senderId,
+      });
 
       // Clean up
-      activeCalls.delete(to);
-      activeCalls.delete(from);
-      console.log(`[CALL CLEANUP] Removed call tracking for ${from} and ${to}`);
+      pendingInvitations.delete(invitationId);
+    } else {
+      io.to(senderSocketId).emit("inviteRejected", { invitationId });
+      pendingInvitations.delete(invitationId);
     }
   });
 
-  socket.on("end-call", ({ from, to }) => {
-    console.log(`[CALL END] ${from} ending call with ${to}`);
+  // GAMING SOCKETS
 
-    const otherUserId = from === socket.userId ? to : from;
-    const targetSocketId = onlineUsers.get(otherUserId);
-
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("call-ended", {
-        userId: socket.userId,
-      });
-      console.log(`[CALL END] Notified ${otherUserId} that call ended`);
-    }
-
-    // Clean up
-    activeCalls.delete(from);
-    activeCalls.delete(to);
-    console.log(`[CALL CLEANUP] Removed call tracking for ${from} and ${to}`);
-  });
-
-  // VIDEO CALL SOCKET EVENTS
   socket.on("disconnect", () => {
     // Find which user disconnected
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
         onlineUsers.delete(userId);
-        // Notify if they were in a call
-        if (activeCalls.has(userId)) {
-          const callData = activeCalls.get(userId);
-          const targetSocketId = onlineUsers.get(callData.to || callData.from);
 
-          if (targetSocketId) {
-            io.to(targetSocketId).emit("call-ended", {
-              userId,
-              reason: "disconnected",
-            });
-            console.log(`[CALL ENDED] ${userId} disconnected during call`);
-          }
-
-          // Clean up
-          activeCalls.delete(userId);
-          activeCalls.delete(callData.to || callData.from);
-          console.log(
-            `[CALL CLEANUP] Removed call tracking for disconnected user ${userId}`
-          );
-        }
         io.emit("userOffline", userId);
         console.log(`User ${userId} disconnected (Offline)`);
         break;
