@@ -28,6 +28,10 @@ import {
   reportUser,
 } from "../controllers/supportController.js";
 import { getAllQuestions } from "../controllers/admin/quizController.js";
+import {
+  getQuizResultsBySession,
+  saveQuizResult,
+} from "../controllers/quizResultController.js";
 
 const router = express.Router();
 
@@ -83,6 +87,8 @@ router.put(
   validateRequest(updateUserSchema),
   updateProfile
 );
+router.post("quiz-result", saveQuizResult);
+router.get("quiz-result", getQuizResultsBySession);
 router.get("/quiz-games", getAllQuestions);
 router.get("/matches", getMatches);
 router.post("/like-user", likeUser);
