@@ -112,7 +112,7 @@ export const io = new SocketServer(server, {
 });
 
 // Track online users
-const onlineUsers = new Map(); // userId -> socketId
+const onlineUsers = new Map();
 const pendingInvitations = new Map();
 
 // Socket.IO logic - Update the messageRead handler
@@ -186,8 +186,15 @@ io.on("connection", (socket) => {
   // GAMING SOCKETS
   // Game invitation handler
   socket.on("sendGameInvite", ({ senderId, recipientId }) => {
+    console.log(
+      `🎮 'sendGameInvite' received from ${senderId} to ${recipientId}`
+    );
+
     // Validate users
     if (!onlineUsers.has(recipientId)) {
+      console.warn(
+        `⚠️ Cannot send invite — recipient ${recipientId} is offline`
+      );
       socket.emit("inviteError", {
         error: "User is currently offline",
         recipientId,
@@ -209,13 +216,17 @@ io.on("connection", (socket) => {
 
     // Store invitation
     pendingInvitations.set(invitationId, invitation);
+    console.log(`📨 Game invite created:`, invitation);
 
     // Send invitation to recipient
     const recipientSocketId = onlineUsers.get(recipientId);
     io.to(recipientSocketId).emit("receiveGameInvite", invitation);
+    console.log(`📤 Sent game invite to recipient socket ${recipientSocketId}`);
 
     // Confirm to sender
     socket.emit("inviteSent", invitation);
+
+    console.log(`📥 Confirmed to sender ${senderId} that invite was sent`);
 
     // Set timeout for expiration (e.g., 30 seconds)
     setTimeout(() => {
@@ -227,16 +238,23 @@ io.on("connection", (socket) => {
             invitationId,
           });
         }
+        console.log(`⏰ Invite ${invitationId} expired`);
       }
     }, 30000);
   });
 
   // Invitation response handler
   socket.on("respondToInvite", ({ invitationId, recipientId, accepted }) => {
+    console.log(`📬 Received 'respondToInvite':`, {
+      invitationId,
+      recipientId,
+      accepted,
+    });
     const invitation = pendingInvitations.get(invitationId);
 
     // Validate invitation
     if (!invitation || invitation.recipientId !== recipientId) {
+      console.error("❌ Invalid or unmatched invitation response");
       socket.emit("inviteError", { error: "Invalid invitation" });
       return;
     }
@@ -254,6 +272,10 @@ io.on("connection", (socket) => {
         .toString(36)
         .substr(2, 9)}`;
 
+      console.log(
+        `✅ Invitation accepted. Creating game session: ${gameSessionId}`
+      );
+
       // Notify both players with game session details
       io.to(senderSocketId).emit("inviteAccepted", {
         invitationId,
@@ -267,9 +289,13 @@ io.on("connection", (socket) => {
         opponentId: invitation.senderId,
       });
 
+      console.log(`📤 Notified both players of game start`);
+
       // Clean up
       pendingInvitations.delete(invitationId);
     } else {
+      console.log(`❌ Invitation rejected by ${recipientId}`);
+
       io.to(senderSocketId).emit("inviteRejected", { invitationId });
       pendingInvitations.delete(invitationId);
     }
@@ -278,6 +304,7 @@ io.on("connection", (socket) => {
   // GAMING SOCKETS
 
   socket.on("disconnect", () => {
+    console.log(`🔌 Socket disconnected: ${socket.id}`);
     // Find which user disconnected
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
