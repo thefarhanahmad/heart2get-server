@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const quizResultSchema = new mongoose.Schema({
-  quizSessionId: { type: String, required: true, unique: true },
+  quizSessionId: { type: String, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   receiverId: {
     type: mongoose.Schema.Types.ObjectId,
