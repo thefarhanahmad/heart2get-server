@@ -88,7 +88,7 @@ router.put(
   updateProfile
 );
 router.post("/quiz-result", saveQuizResult);
-router.get("/quiz-result", getQuizResultsBySession);
+router.get("/quiz-result/:quizSessionId", getQuizResultsBySession);
 router.get("/quiz-games", getAllQuestions);
 router.get("/matches", getMatches);
 router.post("/like-user", likeUser);
