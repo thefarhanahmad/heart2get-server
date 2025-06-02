@@ -12,7 +12,7 @@ export const saveQuizResult = async (req, res) => {
       answers,
     } = req.body;
 
-    const userId = req.user._id; // get userId from token payload
+    const userId = req.user._id;
 
     const existing = await QuizResult.findOne({ quizSessionId, userId });
 
@@ -46,6 +46,8 @@ export const getQuizResultsBySession = async (req, res) => {
     const results = await QuizResult.find({ quizSessionId })
       .populate("userId", "name")
       .populate("receiverId", "name");
+
+    console.log("result by sessioId : ", results);
 
     if (results.length !== 2) {
       return res
