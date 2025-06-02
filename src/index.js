@@ -301,6 +301,27 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle answer selection
+  socket.on("select-answer", (data) => {
+    const { gameSessionId } = data;
+
+    if (!gameSessionId) {
+      console.warn("❌ No gameSessionId in 'select-answer'");
+      return;
+    }
+
+    console.log(
+      `📩 Answer received from ${data.userId} for session ${gameSessionId}:`,
+      data.answer
+    );
+
+    // Join game room if not already in it
+    socket.join(gameSessionId);
+
+    // Broadcast to the game room
+    socket.to(gameSessionId).emit("receive-answer", data);
+  });
+
   // GAMING SOCKETS
 
   socket.on("disconnect", () => {
