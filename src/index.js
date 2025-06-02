@@ -114,6 +114,7 @@ export const io = new SocketServer(server, {
 // Track online users
 const onlineUsers = new Map();
 const pendingInvitations = new Map();
+const gameSessions = new Map(); // Track active game sessions
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -302,24 +303,42 @@ io.on("connection", (socket) => {
   });
 
   // Handle answer selection
-  socket.on("select-answer", (data) => {
-    const { gameSessionId } = data;
 
-    if (!gameSessionId) {
-      console.warn("❌ No gameSessionId in 'select-answer'");
+  socket.on("select-answer", (data) => {
+    const { gameSessionId, userId, answer, questionIndex } = data;
+
+    if (!gameSessions.has(gameSessionId)) {
+      socket.emit("gameError", { error: "Invalid game session" });
       return;
     }
 
-    console.log(
-      `📩 Answer received from ${data.userId} for session ${gameSessionId}:`,
-      data.answer
-    );
+    const game = gameSessions.get(gameSessionId);
 
-    // Join game room if not already in it
-    socket.join(gameSessionId);
+    // Store the answer
+    game.answers = game.answers || {};
+    game.answers[questionIndex] = game.answers[questionIndex] || {};
+    game.answers[questionIndex][userId] = answer;
 
-    // Broadcast to the game room
-    socket.to(gameSessionId).emit("receive-answer", data);
+    // Check if both players answered
+    const playersAnswered = Object.keys(
+      game.answers[questionIndex] || {}
+    ).length;
+
+    if (playersAnswered === 2) {
+      // Notify both players about the answers
+      const answers = game.answers[questionIndex];
+      const userList = Object.keys(answers);
+      const answerValues = Object.values(answers);
+
+      io.to(gameSessionId).emit("bothAnswered", {
+        questionIndex,
+        answers: {
+          [userList[0]]: answerValues[0],
+          [userList[1]]: answerValues[1],
+        },
+        matched: answerValues[0] === answerValues[1],
+      });
+    }
   });
 
   // GAMING SOCKETS
