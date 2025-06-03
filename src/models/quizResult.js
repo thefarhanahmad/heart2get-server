@@ -9,8 +9,8 @@ const quizResultSchema = new mongoose.Schema({
     required: true,
   },
   totalQuestions: { type: Number, required: true },
-  correctAnswers: { type: Number, required: true },
-  wrongAnswers: { type: Number, required: true },
+  correctAnswers: { type: Number, required: false },
+  wrongAnswers: { type: Number, required: false },
   answers: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
 });

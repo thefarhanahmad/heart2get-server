@@ -7,8 +7,7 @@ export const saveQuizResult = async (req, res) => {
       quizSessionId,
       receiverId,
       totalQuestions,
-      correctAnswers,
-      wrongAnswers,
+
       answers,
     } = req.body;
 
@@ -27,8 +26,6 @@ export const saveQuizResult = async (req, res) => {
       userId,
       receiverId,
       totalQuestions,
-      correctAnswers,
-      wrongAnswers,
       answers,
     });
 
