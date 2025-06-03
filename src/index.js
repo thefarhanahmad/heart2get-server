@@ -114,7 +114,7 @@ export const io = new SocketServer(server, {
 // Track online users
 const onlineUsers = new Map();
 const pendingInvitations = new Map();
-const gameAnswers = new Map();
+const pendingAnswers = new Map();
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -306,68 +306,46 @@ io.on("connection", (socket) => {
   socket.on(
     "submitAnswer",
     ({ answerText, userId, receiverId, gameSessionId }) => {
-      console.log(
-        `📝 Answer received from ${userId} in session ${gameSessionId}`
-      );
+      console.log(`📝 Answer from ${userId} for session ${gameSessionId}`);
 
-      // Initialize game session storage if not exists
-      if (!gameAnswers.has(gameSessionId)) {
-        gameAnswers.set(gameSessionId, {
-          player1: null,
-          player2: null,
-          player1Id: null,
-          player2Id: null,
-        });
+      // Initialize if not exists
+      if (!pendingAnswers.has(gameSessionId)) {
+        pendingAnswers.set(gameSessionId, new Map());
       }
 
-      const game = gameAnswers.get(gameSessionId);
+      const gameAnswers = pendingAnswers.get(gameSessionId);
 
-      // Store the answer and track players
-      if (!game.player1Id) {
-        game.player1Id = userId;
-        game.player1 = answerText;
-      } else if (!game.player2Id && userId !== game.player1Id) {
-        game.player2Id = userId;
-        game.player2 = answerText;
-      }
+      // Store the answer
+      gameAnswers.set(userId, answerText);
 
-      // Notify both players when both answers are received
-      if (game.player1 && game.player2) {
+      // Check if both players answered
+      if (gameAnswers.size === 2) {
+        // Convert Map to array of [userId, answer] pairs
+        const answers = Array.from(gameAnswers.entries());
+
         // Prepare response data
-        const response = {
+        const responseData = {
           gameSessionId,
-          yourAnswer: game.player1,
-          opponentAnswer: game.player2,
-          yourUserId: game.player1Id,
-          opponentUserId: game.player2Id,
+          answers: Object.fromEntries(answers), // { userId1: answer1, userId2: answer2 }
         };
 
         // Send to both players
-        const player1Socket = onlineUsers.get(game.player1Id);
-        const player2Socket = onlineUsers.get(game.player2Id);
+        answers.forEach(([playerId]) => {
+          const playerSocket = onlineUsers.get(playerId);
+          if (playerSocket) {
+            io.to(playerSocket).emit("bothAnswersReceived", {
+              ...responseData,
+              yourAnswer: gameAnswers.get(playerId),
+              opponentAnswer: answers.find(([id]) => id !== playerId)[1],
+            });
+          }
+        });
 
-        if (player1Socket) {
-          io.to(player1Socket).emit("answerResults", {
-            ...response,
-            yourAnswer: game.player1,
-            opponentAnswer: game.player2,
-          });
-        }
-
-        if (player2Socket) {
-          io.to(player2Socket).emit("answerResults", {
-            ...response,
-            yourAnswer: game.player2,
-            opponentAnswer: game.player1,
-          });
-        }
-
-        // Reset for next question
-        gameAnswers.delete(gameSessionId);
+        // Clean up
+        pendingAnswers.delete(gameSessionId);
       }
     }
   );
-
   // GAMING SOCKETS
 
   socket.on("disconnect", () => {
