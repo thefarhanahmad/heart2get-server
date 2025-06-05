@@ -32,6 +32,11 @@ import {
   getQuizResultsBySession,
   saveQuizResult,
 } from "../controllers/quizResultController.js";
+import {
+  addToFavourites,
+  getFavourites,
+  removeFromFavourites,
+} from "../controllers/favController.js";
 
 const router = express.Router();
 
@@ -87,6 +92,10 @@ router.put(
   validateRequest(updateUserSchema),
   updateProfile
 );
+router.post("/add-favourite", addToFavourites);
+router.post("/remove-favourite", removeFromFavourites);
+router.get("/my-favourites", getFavourites);
+
 router.post("/quiz-result", saveQuizResult);
 router.get("/quiz-result/:quizSessionId", getQuizResultsBySession);
 router.get("/quiz-games", getAllQuestions);
