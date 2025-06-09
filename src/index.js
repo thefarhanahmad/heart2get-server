@@ -302,36 +302,87 @@ io.on("connection", (socket) => {
     }
   });
 
-  // NEXT STAGE GAME
-  // === GAME NEXT STAGE INVITATION ===
+  // Next Level send
   socket.on(
-    "sendNextStageInvite",
-    ({ gameSessionId, senderId, receiverId, nextStage }) => {
-      const receiverSocketId = onlineUsers.get(receiverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("receiveNextStageInvite", {
-          senderId,
-          nextStage,
-          gameSessionId,
-        });
+    "sendNextLevelInvite",
+    ({ senderId, recipientId, currentLevel }) => {
+      const nextLevel = currentLevel + 1;
+      const invitationId = `nextLevel_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      const invitation = {
+        invitationId,
+        senderId,
+        recipientId,
+        level: nextLevel,
+        timestamp: Date.now(),
+        status: "pending",
+      };
+
+      pendingInvitations.set(invitationId, invitation);
+
+      const recipientSocketId = onlineUsers.get(recipientId);
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("receiveNextLevelInvite", invitation);
       }
+
+      socket.emit("nextLevelInviteSent", invitation);
+
+      // Expire after 30s (optional)
+      setTimeout(() => {
+        if (pendingInvitations.get(invitationId)?.status === "pending") {
+          pendingInvitations.delete(invitationId);
+          io.to(socket.id).emit("inviteExpired", { invitationId });
+          if (recipientSocketId) {
+            io.to(recipientSocketId).emit("inviteExpired", { invitationId });
+          }
+        }
+      }, 30000);
     }
   );
 
   socket.on(
-    "respondToNextStageInvite",
-    ({ accepted, nextStage, gameSessionId, senderId }) => {
-      const senderSocketId = onlineUsers.get(senderId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("nextStageInviteResponse", {
-          accepted,
-          nextStage,
-          gameSessionId,
-        });
+    "respondToNextLevelInvite",
+    ({ invitationId, recipientId, accepted }) => {
+      const invitation = pendingInvitations.get(invitationId);
+      if (!invitation || invitation.recipientId !== recipientId) {
+        socket.emit("inviteError", { error: "Invalid invitation" });
+        return;
       }
+
+      invitation.status = accepted ? "accepted" : "rejected";
+
+      const senderSocketId = onlineUsers.get(invitation.senderId);
+
+      if (accepted) {
+        const gameSessionId = `quiz_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
+        // Notify both players
+        io.to(senderSocketId).emit("inviteAccepted", {
+          invitationId,
+          gameSessionId,
+          level: invitation.level,
+          opponentId: recipientId,
+        });
+
+        socket.emit("inviteAccepted", {
+          invitationId,
+          gameSessionId,
+          level: invitation.level,
+          opponentId: invitation.senderId,
+        });
+
+        console.log(`✅ Players progressing to level ${invitation.level}`);
+      } else {
+        io.to(senderSocketId).emit("inviteRejected", { invitationId });
+      }
+
+      pendingInvitations.delete(invitationId);
     }
   );
-  // NEXT STAGE GAME
 
   // Handle answer submission
   socket.on(
