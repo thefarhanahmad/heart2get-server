@@ -302,6 +302,37 @@ io.on("connection", (socket) => {
     }
   });
 
+  // NEXT STAGE GAME
+  // === GAME NEXT STAGE INVITATION ===
+  socket.on(
+    "sendNextStageInvite",
+    ({ gameSessionId, senderId, receiverId, nextStage }) => {
+      const receiverSocketId = onlineUsers.get(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("receiveNextStageInvite", {
+          senderId,
+          nextStage,
+          gameSessionId,
+        });
+      }
+    }
+  );
+
+  socket.on(
+    "respondToNextStageInvite",
+    ({ accepted, nextStage, gameSessionId, senderId }) => {
+      const senderSocketId = onlineUsers.get(senderId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("nextStageInviteResponse", {
+          accepted,
+          nextStage,
+          gameSessionId,
+        });
+      }
+    }
+  );
+  // NEXT STAGE GAME
+
   // Handle answer submission
   socket.on(
     "submitAnswer",
