@@ -320,25 +320,23 @@ io.on("connection", (socket) => {
 
       // Check if both players answered
       if (gameAnswers.size === 2) {
-        const allPlayerIds = [userId, receiverId];
+        // Convert Map to array of [userId, answer] pairs
+        const answers = Array.from(gameAnswers.entries());
 
-        const answers = allPlayerIds.map((id) => {
-          const answer = gameAnswers.get(id) ?? "no_answered"; // 👈 force no_answered if missing
-          return [id, answer];
-        });
+        // Prepare response data
+        const responseData = {
+          gameSessionId,
+          answers: Object.fromEntries(answers), // { userId1: answer1, userId2: answer2 }
+        };
 
         // Send to both players
         answers.forEach(([playerId]) => {
           const playerSocket = onlineUsers.get(playerId);
           if (playerSocket) {
-            const yourAnswer = answers.find(([id]) => id === playerId)[1];
-            const opponentAnswer = answers.find(([id]) => id !== playerId)[1];
-
             io.to(playerSocket).emit("bothAnswersReceived", {
-              gameSessionId,
-              answers: Object.fromEntries(answers),
-              yourAnswer,
-              opponentAnswer,
+              ...responseData,
+              yourAnswer: gameAnswers.get(playerId),
+              opponentAnswer: answers.find(([id]) => id !== playerId)[1],
             });
           }
         });
@@ -348,8 +346,8 @@ io.on("connection", (socket) => {
       }
     }
   );
-
   // GAMING SOCKETS
+
   socket.on("disconnect", () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);
     // Find which user disconnected
