@@ -340,6 +340,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Submit answer
   socket.on(
     "submitAnswer",
     ({ answerText, userId, receiverId, gameSessionId, questionIndex }) => {
@@ -393,6 +394,35 @@ io.on("connection", (socket) => {
       }
     }
   );
+
+  socket.on("manualGameEnd", ({ gameSessionId, userId }) => {
+    console.log(`🎮 User ${userId} manually ended game ${gameSessionId}`);
+
+    // Find opponent
+    const opponentEntry = [...activeGames.entries()].find(
+      ([uid, session]) => uid !== userId && session === gameSessionId
+    );
+
+    const opponentId = opponentEntry?.[0];
+
+    if (opponentId) {
+      const opponentSocketId = onlineUsers.get(opponentId);
+      if (opponentSocketId) {
+        io.to(opponentSocketId).emit("opponentDisconnected", {
+          gameSessionId,
+          opponentId: userId,
+        });
+      }
+
+      // Clean up both users from activeGames
+      activeGames.delete(userId);
+      activeGames.delete(opponentId);
+
+      console.log(
+        `🧹 Cleaned up game session ${gameSessionId} for users ${userId} and ${opponentId}`
+      );
+    }
+  });
 
   // GAMING SOCKETS
 
