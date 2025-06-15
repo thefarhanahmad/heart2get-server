@@ -212,13 +212,13 @@ io.on("connection", (socket) => {
     //   return;
     // }
 
-    if (activeGames.has(recipientId)) {
-      socket.emit("inviteError", {
-        error: "User is already in a game",
-        recipientId,
-      });
-      return;
-    }
+    // if (activeGames.has(recipientId)) {
+    //   socket.emit("inviteError", {
+    //     error: "User is already in a game",
+    //     recipientId,
+    //   });
+    //   return;
+    // }
 
     // ✅ Check if either user has a pending invite (sent or received)
     const hasPendingInvite = Array.from(pendingInvitations.values()).some(
@@ -422,6 +422,13 @@ io.on("connection", (socket) => {
         `🧹 Cleaned up game session ${gameSessionId} for users ${userId} and ${opponentId}`
       );
     }
+  });
+
+  socket.on("leaveGameSession", ({ userId, gameSessionId }) => {
+    if (activeGameSessions[userId]) {
+      delete activeGameSessions[userId];
+    }
+    socket.leave(gameSessionId);
   });
 
   // GAMING SOCKETS
