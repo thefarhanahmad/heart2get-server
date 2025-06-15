@@ -205,12 +205,12 @@ io.on("connection", (socket) => {
     }
 
     // ✅ Check if sender or recipient is already in an active game
-    if (activeGames.has(senderId)) {
-      socket.emit("inviteError", {
-        error: "You are already in a game",
-      });
-      return;
-    }
+    // if (activeGames.has(senderId)) {
+    //   socket.emit("inviteError", {
+    //     error: "You are already in a game",
+    //   });
+    //   return;
+    // }
 
     if (activeGames.has(recipientId)) {
       socket.emit("inviteError", {
@@ -425,7 +425,6 @@ io.on("connection", (socket) => {
   });
 
   // GAMING SOCKETS
-
   socket.on("disconnect", () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);
     // Find which user disconnected
