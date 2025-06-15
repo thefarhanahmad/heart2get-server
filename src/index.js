@@ -115,6 +115,7 @@ export const io = new SocketServer(server, {
 const onlineUsers = new Map();
 const pendingInvitations = new Map();
 const pendingAnswers = new Map();
+const activeGames = new Map(); // Tracks users currently playing
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -203,6 +204,39 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // ✅ Check if sender or recipient is already in an active game
+    if (activeGames.has(senderId)) {
+      socket.emit("inviteError", {
+        error: "You are already in a game",
+      });
+      return;
+    }
+
+    if (activeGames.has(recipientId)) {
+      socket.emit("inviteError", {
+        error: "User is already in a game",
+        recipientId,
+      });
+      return;
+    }
+
+    // ✅ Check if either user has a pending invite (sent or received)
+    const hasPendingInvite = Array.from(pendingInvitations.values()).some(
+      (inv) =>
+        inv.status === "pending" &&
+        (inv.senderId === senderId ||
+          inv.recipientId === senderId ||
+          inv.senderId === recipientId ||
+          inv.recipientId === recipientId)
+    );
+
+    if (hasPendingInvite) {
+      socket.emit("inviteError", {
+        error: "Either you or the recipient has a pending invite",
+      });
+      return;
+    }
+
     // Create invitation
     const invitationId = `invite_${Date.now()}_${Math.random()
       .toString(36)
@@ -272,6 +306,10 @@ io.on("connection", (socket) => {
       const gameSessionId = `quiz_${Date.now()}_${Math.random()
         .toString(36)
         .substr(2, 9)}`;
+
+      // ✅ Mark both users as in-game
+      activeGames.set(invitation.senderId, gameSessionId);
+      activeGames.set(invitation.recipientId, gameSessionId);
 
       console.log(
         `✅ Invitation accepted. Creating game session: ${gameSessionId}`
@@ -367,6 +405,33 @@ io.on("connection", (socket) => {
 
         io.emit("userOffline", userId);
         console.log(`User ${userId} disconnected (Offline)`);
+        // ✅ Also clean up if user was in a game
+        if (activeGames.has(userId)) {
+          const gameSessionId = activeGames.get(userId);
+
+          // Find opponent
+          const opponentId = [...activeGames.entries()].find(
+            ([uid, session]) => uid !== userId && session === gameSessionId
+          )?.[0];
+
+          activeGames.delete(userId);
+          if (opponentId) {
+            activeGames.delete(opponentId);
+
+            // Notify opponent (optional)
+            const opponentSocket = onlineUsers.get(opponentId);
+            if (opponentSocket) {
+              io.to(opponentSocket).emit("opponentDisconnected", {
+                gameSessionId,
+                opponentId: userId,
+              });
+            }
+
+            console.log(
+              `🎮 Game session ${gameSessionId} ended due to disconnect of ${userId}`
+            );
+          }
+        }
         break;
       }
     }
