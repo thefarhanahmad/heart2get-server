@@ -303,12 +303,13 @@ io.on("connection", (socket) => {
   });
 
   // Handle answer submission
+  // Handle answer submission
   socket.on(
     "submitAnswer",
     ({ answerText, userId, receiverId, gameSessionId }) => {
       console.log(`📝 Answer from ${userId} for session ${gameSessionId}`);
 
-      // Initialize if not exists
+      // Initialize session if not present
       if (!pendingAnswers.has(gameSessionId)) {
         pendingAnswers.set(gameSessionId, new Map());
       }
@@ -318,35 +319,46 @@ io.on("connection", (socket) => {
       // Store the answer
       gameAnswers.set(userId, answerText);
 
-      // Check if both players answered
+      // If both users have answered
       if (gameAnswers.size === 2) {
-        // Convert Map to array of [userId, answer] pairs
-        const answers = Array.from(gameAnswers.entries());
+        const [player1, player2] = Array.from(gameAnswers.keys());
 
-        // Prepare response data
-        const responseData = {
-          gameSessionId,
-          answers: Object.fromEntries(answers), // { userId1: answer1, userId2: answer2 }
-        };
+        const answer1 = gameAnswers.get(player1);
+        const answer2 = gameAnswers.get(player2);
 
-        // Send to both players
-        answers.forEach(([playerId]) => {
-          const playerSocket = onlineUsers.get(playerId);
-          if (playerSocket) {
-            io.to(playerSocket).emit("bothAnswersReceived", {
-              ...responseData,
-              userId: playerId,
-              yourAnswer: gameAnswers.get(playerId),
-              opponentAnswer: answers.find(([id]) => id !== playerId)[1],
-            });
-          }
-        });
+        // 🧱 SAFETY CHECK — avoid sending incomplete data
+        if (!answer1 || !answer2) {
+          console.warn("⚠️ Both answers not available, skipping broadcast");
+          return;
+        }
+
+        const socket1 = onlineUsers.get(player1);
+        const socket2 = onlineUsers.get(player2);
+
+        if (socket1) {
+          io.to(socket1).emit("bothAnswersReceived", {
+            gameSessionId,
+            userId: player1,
+            yourAnswer: answer1,
+            opponentAnswer: answer2,
+          });
+        }
+
+        if (socket2) {
+          io.to(socket2).emit("bothAnswersReceived", {
+            gameSessionId,
+            userId: player2,
+            yourAnswer: answer2,
+            opponentAnswer: answer1,
+          });
+        }
 
         // Clean up
         pendingAnswers.delete(gameSessionId);
       }
     }
   );
+
   // GAMING SOCKETS
 
   socket.on("disconnect", () => {
