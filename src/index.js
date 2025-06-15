@@ -335,6 +335,7 @@ io.on("connection", (socket) => {
           if (playerSocket) {
             io.to(playerSocket).emit("bothAnswersReceived", {
               ...responseData,
+              userId: playerId,
               yourAnswer: gameAnswers.get(playerId),
               opponentAnswer: answers.find(([id]) => id !== playerId)[1],
             });
