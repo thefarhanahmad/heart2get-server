@@ -302,35 +302,30 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Handle answer submission
-  // Handle answer submission
   socket.on(
     "submitAnswer",
-    ({ answerText, userId, receiverId, gameSessionId }) => {
-      console.log(`📝 Answer from ${userId} for session ${gameSessionId}`);
+    ({ answerText, userId, receiverId, gameSessionId, questionIndex }) => {
+      const sessionKey = `${gameSessionId}_${questionIndex}`; // 👉 key is now session + question
 
-      // Initialize session if not present
-      if (!pendingAnswers.has(gameSessionId)) {
-        pendingAnswers.set(gameSessionId, new Map());
+      console.log(
+        `📝 Answer from ${userId} for session ${gameSessionId}, question ${questionIndex}`
+      );
+
+      // Initialize if not exists
+      if (!pendingAnswers.has(sessionKey)) {
+        pendingAnswers.set(sessionKey, new Map());
       }
 
-      const gameAnswers = pendingAnswers.get(gameSessionId);
-
-      // Store the answer
+      const gameAnswers = pendingAnswers.get(sessionKey);
       gameAnswers.set(userId, answerText);
 
       // If both users have answered
       if (gameAnswers.size === 2) {
         const [player1, player2] = Array.from(gameAnswers.keys());
-
         const answer1 = gameAnswers.get(player1);
         const answer2 = gameAnswers.get(player2);
 
-        // 🧱 SAFETY CHECK — avoid sending incomplete data
-        if (!answer1 || !answer2) {
-          console.warn("⚠️ Both answers not available, skipping broadcast");
-          return;
-        }
+        if (!answer1 || !answer2) return;
 
         const socket1 = onlineUsers.get(player1);
         const socket2 = onlineUsers.get(player2);
@@ -338,6 +333,7 @@ io.on("connection", (socket) => {
         if (socket1) {
           io.to(socket1).emit("bothAnswersReceived", {
             gameSessionId,
+            questionIndex,
             userId: player1,
             yourAnswer: answer1,
             opponentAnswer: answer2,
@@ -347,14 +343,15 @@ io.on("connection", (socket) => {
         if (socket2) {
           io.to(socket2).emit("bothAnswersReceived", {
             gameSessionId,
+            questionIndex,
             userId: player2,
             yourAnswer: answer2,
             opponentAnswer: answer1,
           });
         }
 
-        // Clean up
-        pendingAnswers.delete(gameSessionId);
+        // Clean this specific question's data
+        pendingAnswers.delete(sessionKey);
       }
     }
   );
