@@ -435,8 +435,8 @@ io.on("connection", (socket) => {
 
   // End the game after complete game
   socket.on("leaveGameSession", ({ userId, gameSessionId }) => {
-    if (activeGameSessions[userId]) {
-      delete activeGameSessions[userId];
+    if (activeGames.has(userId)) {
+      activeGames.delete(userId);
     }
     socket.leave(gameSessionId);
   });
