@@ -260,12 +260,10 @@ io.on("connection", (socket) => {
     setTimeout(() => {
       if (pendingInvitations.get(invitationId)?.status === "pending") {
         pendingInvitations.delete(invitationId);
+
+        // ✅ Notify only sender, not recipient
         io.to(socket.id).emit("inviteExpired", { invitationId });
-        if (onlineUsers.has(recipientId)) {
-          io.to(onlineUsers.get(recipientId)).emit("inviteExpired", {
-            invitationId,
-          });
-        }
+
         console.log(`⏰ Invite ${invitationId} expired`);
       }
     }, 30000);
