@@ -18,6 +18,7 @@ import storyRoutes from "./routes/storyRoutes.js";
 import locationRoutes from "./routes/locationRoutes.js";
 import Message from "./models/chatModel.js";
 import { autoExpireSubscriptions } from "./utils/cronJobs.js";
+import User from "./models/userModel.js";
 
 // Load environment variables
 dotenv.config();
@@ -187,7 +188,7 @@ io.on("connection", (socket) => {
 
   // GAMING SOCKETS
   // Game invitation handler
-  socket.on("sendGameInvite", ({ senderId, recipientId }) => {
+  socket.on("sendGameInvite", async ({ senderId, recipientId }) => {
     console.log(
       `🎮 'sendGameInvite' received from ${senderId} to ${recipientId}`
     );
@@ -203,22 +204,6 @@ io.on("connection", (socket) => {
       });
       return;
     }
-
-    // ✅ Check if sender or recipient is already in an active game
-    // if (activeGames.has(senderId)) {
-    //   socket.emit("inviteError", {
-    //     error: "You are already in a game",
-    //   });
-    //   return;
-    // }
-
-    // if (activeGames.has(recipientId)) {
-    //   socket.emit("inviteError", {
-    //     error: "User is already in a game",
-    //     recipientId,
-    //   });
-    //   return;
-    // }
 
     // ✅ Check if either user has a pending invite (sent or received)
     const hasPendingInvite = Array.from(pendingInvitations.values()).some(
@@ -237,6 +222,13 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // ✅ Fetch sender's name from the database
+    const sender = await User.findById(senderId).select("name");
+    if (!sender) {
+      socket.emit("inviteError", { error: "Sender not found" });
+      return;
+    }
+
     // Create invitation
     const invitationId = `invite_${Date.now()}_${Math.random()
       .toString(36)
@@ -247,6 +239,7 @@ io.on("connection", (socket) => {
       recipientId,
       timestamp: Date.now(),
       status: "pending",
+      senderName: sender.name,
     };
 
     // Store invitation
