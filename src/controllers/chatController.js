@@ -58,6 +58,9 @@ export const getChatUsers = async (req, res) => {
       })
     );
 
+    // ✅ Sort by latest message timestamp
+    userList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     res.status(200).json({
       status: true,
       users: userList,
@@ -126,8 +129,9 @@ export const sendMessage = async (req, res) => {
 
     // Handle file upload if present
     if (req.file && ["image", "audio", "doc"].includes(type)) {
-      fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename
-        }`;
+      fileUrl = `${req.protocol}://${req.get("host")}/uploads/${
+        req.file.filename
+      }`;
     }
 
     const newMessage = await Message.create({
