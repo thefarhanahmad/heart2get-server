@@ -412,6 +412,7 @@ io.on("connection", (socket) => {
         io.to(opponentSocketId).emit("opponentDisconnected", {
           gameSessionId,
           opponentId: userId,
+          manual: true,
         });
       }
 
@@ -470,6 +471,7 @@ io.on("connection", (socket) => {
               io.to(opponentSocket).emit("opponentDisconnected", {
                 gameSessionId,
                 opponentId: userId,
+                manual: false,
               });
             }
 
