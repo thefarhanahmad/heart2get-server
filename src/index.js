@@ -261,8 +261,14 @@ io.on("connection", (socket) => {
       if (pendingInvitations.get(invitationId)?.status === "pending") {
         pendingInvitations.delete(invitationId);
 
-        // ✅ Notify only sender, not recipient
+        // Notify sender (show modal)
         io.to(socket.id).emit("inviteExpired", { invitationId });
+
+        // Notify receiver (just dismiss modal)
+        const recipientSocketId = onlineUsers.get(recipientId);
+        if (recipientSocketId) {
+          io.to(recipientSocketId).emit("inviteAutoDismiss", { invitationId });
+        }
 
         console.log(`⏰ Invite ${invitationId} expired`);
       }
