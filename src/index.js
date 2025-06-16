@@ -272,66 +272,90 @@ io.on("connection", (socket) => {
   });
 
   // Invitation response handler
-  socket.on("respondToInvite", ({ invitationId, recipientId, accepted }) => {
-    console.log(`📬 Received 'respondToInvite':`, {
-      invitationId,
-      recipientId,
-      accepted,
-    });
-    const invitation = pendingInvitations.get(invitationId);
-
-    // Validate invitation
-    if (!invitation || invitation.recipientId !== recipientId) {
-      console.error("❌ Invalid or unmatched invitation response");
-      socket.emit("inviteError", { error: "Invalid invitation" });
-      return;
-    }
-
-    // Update status
-    invitation.status = accepted ? "accepted" : "rejected";
-    pendingInvitations.set(invitationId, invitation);
-
-    // Notify both parties
-    const senderSocketId = onlineUsers.get(invitation.senderId);
-
-    if (accepted) {
-      // Create game session
-      const gameSessionId = `quiz_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-
-      // ✅ Mark both users as in-game
-      activeGames.set(invitation.senderId, gameSessionId);
-      activeGames.set(invitation.recipientId, gameSessionId);
-
-      console.log(
-        `✅ Invitation accepted. Creating game session: ${gameSessionId}`
-      );
-
-      // Notify both players with game session details
-      io.to(senderSocketId).emit("inviteAccepted", {
+  socket.on(
+    "respondToInvite",
+    async ({ invitationId, recipientId, accepted }) => {
+      console.log(`📬 Received 'respondToInvite':`, {
         invitationId,
-        gameSessionId,
-        opponentId: recipientId,
+        recipientId,
+        accepted,
       });
 
-      socket.emit("inviteAccepted", {
-        invitationId,
-        gameSessionId,
-        opponentId: invitation.senderId,
-      });
+      const invitation = pendingInvitations.get(invitationId);
 
-      console.log(`📤 Notified both players of game start`);
+      // Validate invitation
+      if (!invitation || invitation.recipientId !== recipientId) {
+        console.error("❌ Invalid or unmatched invitation response");
+        socket.emit("inviteError", { error: "Invalid invitation" });
+        return;
+      }
 
-      // Clean up
-      pendingInvitations.delete(invitationId);
-    } else {
-      console.log(`❌ Invitation rejected by ${recipientId}`);
+      // Update invitation status
+      invitation.status = accepted ? "accepted" : "rejected";
+      pendingInvitations.set(invitationId, invitation);
 
-      io.to(senderSocketId).emit("inviteRejected", { invitationId });
-      pendingInvitations.delete(invitationId);
+      const senderSocketId = onlineUsers.get(invitation.senderId);
+
+      if (accepted) {
+        // Generate unique game session ID
+        const gameSessionId = `quiz_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
+        // Mark both users as in-game
+        activeGames.set(invitation.senderId, gameSessionId);
+        activeGames.set(invitation.recipientId, gameSessionId);
+
+        console.log(
+          `✅ Invitation accepted. Game session created: ${gameSessionId}`
+        );
+
+        // Notify both users
+        io.to(senderSocketId).emit("inviteAccepted", {
+          invitationId,
+          gameSessionId,
+          opponentId: recipientId,
+        });
+
+        socket.emit("inviteAccepted", {
+          invitationId,
+          gameSessionId,
+          opponentId: invitation.senderId,
+        });
+
+        // Cleanup
+        pendingInvitations.delete(invitationId);
+      } else {
+        try {
+          // Fetch recipient's name
+          const recipient = await User.findById(recipientId).select("name");
+          const recipientName = recipient?.name || "The player";
+
+          console.log(
+            `❌ Invitation rejected by ${recipientId} (${recipientName})`
+          );
+
+          // Notify sender with recipient name
+          io.to(senderSocketId).emit("inviteRejected", {
+            invitationId,
+            recipientName,
+          });
+
+          // Cleanup
+          pendingInvitations.delete(invitationId);
+        } catch (error) {
+          console.error("⚠️ Error fetching recipient name:", error);
+          // Still notify rejection without name
+          io.to(senderSocketId).emit("inviteRejected", {
+            invitationId,
+            recipientName: "The player",
+          });
+
+          pendingInvitations.delete(invitationId);
+        }
+      }
     }
-  });
+  );
 
   // Submit answer
   socket.on(
