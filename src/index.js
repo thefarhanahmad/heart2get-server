@@ -188,7 +188,7 @@ io.on("connection", (socket) => {
 
   // GAMING SOCKETS
   // Game invitation handler
-  socket.on("sendGameInvite", async ({ senderId, recipientId, level }) => {
+  socket.on("sendGameInvite", async ({ senderId, recipientId, level = 1 }) => {
     console.log(
       `🎮 'sendGameInvite' received from ${senderId} to ${recipientId}`
     );
