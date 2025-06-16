@@ -188,7 +188,7 @@ io.on("connection", (socket) => {
 
   // GAMING SOCKETS
   // Game invitation handler
-  socket.on("sendGameInvite", async ({ senderId, recipientId }) => {
+  socket.on("sendGameInvite", async ({ senderId, recipientId, level }) => {
     console.log(
       `🎮 'sendGameInvite' received from ${senderId} to ${recipientId}`
     );
@@ -240,6 +240,7 @@ io.on("connection", (socket) => {
       timestamp: Date.now(),
       status: "pending",
       senderName: sender.name,
+      level,
     };
 
     // Store invitation
