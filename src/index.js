@@ -395,6 +395,7 @@ io.on("connection", (socket) => {
     }
   );
 
+  // End game between playing games
   socket.on("manualGameEnd", ({ gameSessionId, userId }) => {
     console.log(`🎮 User ${userId} manually ended game ${gameSessionId}`);
 
@@ -421,9 +422,18 @@ io.on("connection", (socket) => {
       console.log(
         `🧹 Cleaned up game session ${gameSessionId} for users ${userId} and ${opponentId}`
       );
+    } else {
+      activeGames.delete(userId); // if no opponent
     }
+
+    // ✅ Emit confirmation back to user who ended the game
+    socket.emit("gameEnded", {
+      userId,
+      gameSessionId,
+    });
   });
 
+  // End the game after complete game
   socket.on("leaveGameSession", ({ userId, gameSessionId }) => {
     if (activeGameSessions[userId]) {
       delete activeGameSessions[userId];
