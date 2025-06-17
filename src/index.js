@@ -116,7 +116,8 @@ export const io = new SocketServer(server, {
 const onlineUsers = new Map();
 const pendingInvitations = new Map();
 const pendingAnswers = new Map();
-const activeGames = new Map(); // Tracks users currently playing
+const activeGames = new Map();
+const activeCalls = new Map();
 
 // Socket.IO logic - Update the messageRead handler
 io.on("connection", (socket) => {
@@ -186,7 +187,51 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("callAccept", ({ to, from }) => {
+    const userisonline = onlineUsers.get(to);
+    if (userisonline) {
+      socket.to(userisonline).emit("callAccept", {
+        to,
+        from,
+      });
+      setUserbussy(to, from);
+    }
+  });
+  socket.on("callend", (data) => {
+    const { to, from } = data;
+    console.log("this is call end", data);
+    [to, from].forEach((ele) => {
+      const userisonline = onlineUsers.get(ele);
+      console.log("this is userisonline", userisonline);
+
+      socket.to(userisonline).emit("callend", {
+        to,
+        from,
+      });
+      removeUserbussy(to, from);
+    });
+  });
+  socket.on("incoming", (data) => {
+    console.log("hee", onlineUsers);
+    console.log("socket it", data);
+    const chekisuserbusy = activeCalls.has(data?.to);
+    console.log("chek", chekisuserbusy);
+    if (chekisuserbusy) {
+      console.log("this is chek2 ", data?.from);
+      const caller = data?.from;
+      socket.to(caller).emit("userbussy", { message: "user is bussy" });
+    } else {
+      const userisonline = onlineUsers.get(data.to);
+      console.log("this is online ", userisonline);
+      if (userisonline) {
+        console.log("this is chek2 ", data?.from);
+        io.to(userisonline).emit("incoming", data);
+      }
+    }
+  });
+
   // GAMING SOCKETS
+
   // Game invitation handler
   socket.on("sendGameInvite", async ({ senderId, recipientId, level = 1 }) => {
     console.log(
@@ -466,15 +511,34 @@ io.on("connection", (socket) => {
 
   // GAMING SOCKETS
   socket.on("disconnect", () => {
-    console.log(`🔌 Socket disconnected: ${socket.id}`);
-    // Find which user disconnected
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
+        // Remove from online users
         onlineUsers.delete(userId);
-
         io.emit("userOffline", userId);
-        console.log(`User ${userId} disconnected (Offline)`);
-        // ✅ Also clean up if user was in a game
+        // Handle active call cleanup
+        if (activeCalls.has(userId)) {
+          const callData = activeCalls.get(userId);
+          if (callData) {
+            const otherUserId = callData.to || callData.from;
+            const targetSocketId = onlineUsers.get(otherUserId);
+
+            if (targetSocketId) {
+              io.to(targetSocketId).emit("call-ended", {
+                userId,
+                reason: "disconnected",
+              });
+              console.log(`[CALL ENDED] ${userId} disconnected during call`);
+            }
+
+            // Clean up both users in call
+            activeCalls.delete(userId);
+            activeCalls.delete(otherUserId);
+            console.log(`[CALL CLEANUP] Removed call tracking for ${userId}`);
+          }
+        }
+
+        // Handle active game cleanup
         if (activeGames.has(userId)) {
           const gameSessionId = activeGames.get(userId);
 
@@ -484,10 +548,10 @@ io.on("connection", (socket) => {
           )?.[0];
 
           activeGames.delete(userId);
+
           if (opponentId) {
             activeGames.delete(opponentId);
 
-            // Notify opponent (optional)
             const opponentSocket = onlineUsers.get(opponentId);
             if (opponentSocket) {
               io.to(opponentSocket).emit("opponentDisconnected", {
@@ -502,7 +566,8 @@ io.on("connection", (socket) => {
             );
           }
         }
-        break;
+
+        break; // We've handled the disconnected user
       }
     }
   });

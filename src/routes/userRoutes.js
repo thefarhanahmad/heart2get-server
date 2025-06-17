@@ -13,6 +13,7 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  videoCall,
 } from "../controllers/userController.js";
 import {
   setupProfile,
@@ -74,6 +75,8 @@ const upload = multer({
 
 // Apply protect middleware to all routes
 router.use(protect);
+
+router.post("/videocall", videoCall);
 
 // support tickets
 router.get("/tickets", getUserSupportTickets);
