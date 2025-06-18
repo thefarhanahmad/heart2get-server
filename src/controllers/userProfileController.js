@@ -79,6 +79,7 @@ export const getMatches = async (req, res) => {
     const query = {
       _id: {
         $ne: req.user.id,
+        $nin: user.likedUsers,
       },
       status: "active",
       i_am:
@@ -286,7 +287,7 @@ export const getUserDetails = async (req, res) => {
         skin_color: targetUser.skin_color,
         height: targetUser.height,
         weight: targetUser.weight,
-        match_percentage: matchScore, // 🎯 Added here
+        match_percentage: matchScore, 
       },
     });
   } catch (error) {

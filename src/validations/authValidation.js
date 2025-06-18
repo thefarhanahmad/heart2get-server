@@ -5,8 +5,17 @@ export const sendOtpSchema = Joi.object({
     .pattern(/^[0-9]{8,15}$/)
     .required()
     .messages({
-      "string.pattern.base": "Mobile number must be 15 digits",
+      "string.pattern.base": "Mobile number must be between 8 to 15 digits",
       "any.required": "Mobile number is required",
+    }),
+
+  countryCode: Joi.string()
+    .pattern(/^\+[1-9][0-9]{0,3}$/)
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Country code must start with '+' followed by 1 to 4 digits",
+      "any.required": "Country code is required",
     }),
 });
 

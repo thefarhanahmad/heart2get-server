@@ -1,18 +1,38 @@
-// Simple OTP generator and dummy sender
+import twilio from "twilio";
+
+// Twilio config from environment variables
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+
+const client = twilio(accountSid, authToken);
+
+// ✅ 1. Real 4-digit OTP Generator
 export const generateOTP = () => {
-  // For testing purposes, always generate '123456' as OTP
-  return '1234';
+  return Math.floor(1000 + Math.random() * 9000).toString(); // Generates 1000-9999
 };
 
+// ✅ 2. Real SMS Sender using Twilio
 export const sendSMS = async (to, message) => {
-  // Log the OTP for development purposes
-  console.log('==================================');
-  console.log('DUMMY SMS SERVICE');
-  console.log(`Sending SMS to: ${to}`);
-  console.log(`Message: ${message}`);
-  console.log('OTP for testing: 1234');
-  console.log('==================================');
+  try {
+    const result = await client.messages.create({
+      body: message,
+      from: twilioPhone,
+      to,
+    });
+    console.log(`✅ SMS sent to ${to}. SID: ${result.sid}`);
+  } catch (error) {
+    console.error("❌ Twilio Error:", error);
 
-  // Simulate async behavior
-  return new Promise(resolve => setTimeout(resolve, 1000));
+    // Twilio error 21608 = “Permission to send an SMS has not been enabled for the region”
+    if (
+      error.code === 21608 ||
+      error.message?.includes("Permission to send an SMS has not been enabled")
+    ) {
+      throw new Error("SMS delivery is not allowed to this region.");
+    }
+
+    // Fallback for any other Twilio failure
+    throw new Error("Failed to send SMS. Please try again later.");
+  }
 };
