@@ -2,26 +2,80 @@ import QuizQuestion from "../../models/quizQuestionModel.js";
 import QuizCategory from "../../models/quizCategoryModel.js";
 import User from "../../models/userModel.js";
 
-// Create a new quiz question
 export const createQuestion = async (req, res) => {
   try {
-    const question = await QuizQuestion.create(req.body);
+    const { question, options, stage } = req.body;
 
-    res.status(201).json({
+    // Basic presence checks
+    if (!question || !Array.isArray(options) || !stage) {
+      return res.status(400).json({
+        status: false,
+        message: "Question, options, and stage are required.",
+      });
+    }
+
+    // Ensure exactly 4 options
+    if (options.length !== 4) {
+      return res.status(400).json({
+        status: false,
+        message: "Exactly 4 options are required.",
+      });
+    }
+
+    // Count how many options belong to each category
+    const categoryCounts = options.reduce(
+      (acc, opt) => {
+        if (!opt.text || !opt.category) {
+          throw new Error("Each option must have text and category.");
+        }
+
+        if (
+          opt.category !== "Self Soothing" &&
+          opt.category !== "Social Support"
+        ) {
+          throw new Error("Invalid option category provided.");
+        }
+
+        acc[opt.category]++;
+        return acc;
+      },
+      { "Self Soothing": 0, "Social Support": 0 }
+    );
+
+    // Validate category distribution
+    if (
+      categoryCounts["Self Soothing"] !== 2 ||
+      categoryCounts["Social Support"] !== 2
+    ) {
+      return res.status(400).json({
+        status: false,
+        message:
+          "Exactly 2 options must be from 'Self Soothing' and 2 from 'Social Support'.",
+      });
+    }
+
+    // Create question
+    const newQuestion = await QuizQuestion.create({
+      question,
+      options,
+      stage,
+    });
+
+    return res.status(201).json({
       status: true,
       message: "Question added successfully",
       question: {
-        id: question._id,
-        question: question.question,
-        options: question.options,
-        status: question.status,
-        stage: question.stage,
+        id: newQuestion._id,
+        question: newQuestion.question,
+        options: newQuestion.options,
+        status: newQuestion.status,
+        stage: newQuestion.stage,
       },
     });
   } catch (error) {
     res.status(400).json({
       status: false,
-      message: error.message,
+      message: error.message || "Failed to create question",
     });
   }
 };
@@ -37,7 +91,9 @@ export const getAllQuestions = async (req, res) => {
       filter.stage = Number(stage); // Convert stage to number for querying
     }
 
-    const questions = await QuizQuestion.find(filter).lean();
+    const questions = await QuizQuestion.find(filter)
+      .lean()
+      .sort({ createdAt: -1 });
 
     const formattedQuestions = questions.map((q) => ({
       id: q._id,
@@ -92,13 +148,68 @@ export const getQuestionById = async (req, res) => {
 // Update an existing question
 export const updateQuestion = async (req, res) => {
   try {
-    const question = await QuizQuestion.findByIdAndUpdate(
+    const { question, options, stage, status } = req.body;
+
+    // Basic presence checks
+    if (!question || !Array.isArray(options) || !stage) {
+      return res.status(400).json({
+        status: false,
+        message: "Question, options, and stage are required.",
+      });
+    }
+
+    // Ensure exactly 4 options
+    if (options.length !== 4) {
+      return res.status(400).json({
+        status: false,
+        message: "Exactly 4 options are required.",
+      });
+    }
+
+    // Count how many options belong to each category
+    const categoryCounts = options.reduce(
+      (acc, opt) => {
+        if (!opt.text || !opt.category) {
+          throw new Error("Each option must have text and category.");
+        }
+
+        if (
+          opt.category !== "Self Soothing" &&
+          opt.category !== "Social Support"
+        ) {
+          throw new Error("Invalid option category provided.");
+        }
+
+        acc[opt.category]++;
+        return acc;
+      },
+      { "Self Soothing": 0, "Social Support": 0 }
+    );
+
+    if (
+      categoryCounts["Self Soothing"] !== 2 ||
+      categoryCounts["Social Support"] !== 2
+    ) {
+      return res.status(400).json({
+        status: false,
+        message:
+          "Exactly 2 options must be from 'Self Soothing' and 2 from 'Social Support'.",
+      });
+    }
+
+    // Update question
+    const updatedQuestion = await QuizQuestion.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        question,
+        options,
+        stage,
+        status: status || "active",
+      },
       { new: true, runValidators: true }
     );
 
-    if (!question) {
+    if (!updatedQuestion) {
       return res.status(404).json({
         status: false,
         message: "Question not found",
@@ -109,17 +220,17 @@ export const updateQuestion = async (req, res) => {
       status: true,
       message: "Question updated successfully",
       question: {
-        id: question._id,
-        question: question.question,
-        options: question.options,
-        status: question.status,
-        stage: question.stage,
+        id: updatedQuestion._id,
+        question: updatedQuestion.question,
+        options: updatedQuestion.options,
+        status: updatedQuestion.status,
+        stage: updatedQuestion.stage,
       },
     });
   } catch (error) {
     res.status(400).json({
       status: false,
-      message: error.message,
+      message: error.message || "Failed to update question",
     });
   }
 };

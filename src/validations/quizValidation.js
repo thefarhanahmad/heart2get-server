@@ -1,70 +1,86 @@
-import Joi from 'joi';
+import Joi from "joi";
 
 export const createQuestionSchema = Joi.object({
-    question: Joi.string()
-        .pattern(/^[A-Za-z\s?]+$/)
-        .required()
-        .messages({
-            'string.pattern.base': 'Question must contain only letters, spaces, or question mark',
-            'string.empty': 'Question is required',
-        }),
+  question: Joi.string()
+    .trim()
+    .pattern(/^[A-Za-z0-9\s?'"-]+$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Question must contain only valid characters",
+      "string.empty": "Question is required",
+    }),
 
-    type: Joi.string().valid('single', 'multiple').required(),
-    category_id: Joi.string().required(),
-    points: Joi.number().min(1).required(),
-    options: Joi.array().items(
-        Joi.object({
-            text: Joi.string().required(),
-            is_correct: Joi.boolean().required()
-        })
-    ).min(2).required(),
-    status: Joi.string().valid('active', 'inactive').default('active'),
-    required: Joi.boolean().default(false)
+  options: Joi.array()
+    .items(
+      Joi.object({
+        text: Joi.string().required().messages({
+          "string.empty": "Option text is required",
+        }),
+        category: Joi.string()
+          .valid("Self Soothing", "Social Support")
+          .required()
+          .messages({
+            "any.only":
+              "Category must be either Self Soothing or Social Support",
+            "string.empty": "Category is required",
+          }),
+      })
+    )
+    .min(2)
+    .required(),
+
+  stage: Joi.number().valid(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).required(),
 });
 
 export const updateQuestionSchema = Joi.object({
-    question: Joi.string()
-        .pattern(/^[A-Za-z\s?]+$/)
+  question: Joi.string()
+    .trim()
+    .pattern(/^[A-Za-z0-9\s?'"-]+$/)
+    .messages({
+      "string.pattern.base": "Question must contain only valid characters",
+      "string.empty": "Question is required",
+    }),
+
+  options: Joi.array().items(
+    Joi.object({
+      text: Joi.string().required().messages({
+        "string.empty": "Option text is required",
+      }),
+      category: Joi.string()
+        .valid("Self Soothing", "Social Support")
         .required()
         .messages({
-            'string.pattern.base': 'Question must contain only letters, spaces, or question mark',
-            'string.empty': 'Question is required',
+          "any.only": "Category must be either Self Soothing or Social Support",
+          "string.empty": "Category is required",
         }),
+    })
+  ),
 
-    type: Joi.string().valid('single', 'multiple'),
-    category_id: Joi.string(),
-    points: Joi.number().min(1),
-    options: Joi.array().items(
-        Joi.object({
-            text: Joi.string().required(),
-            is_correct: Joi.boolean().required()
-        })
-    ).min(2),
-    status: Joi.string().valid('active', 'inactive'),
-    required: Joi.boolean().default(false)
+  status: Joi.string().valid("active", "inactive"),
+
+  stage: Joi.number().valid(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
 }).min(1);
 
 export const createCategorySchema = Joi.object({
-    name: Joi.string()
-        .pattern(/^[A-Za-z\s]+$/)
-        .required()
-        .messages({
-            'string.pattern.base': 'Name must contain only letters and spaces',
-            'string.empty': 'Name is required',
-        }),
-    description: Joi.string(),
-    status: Joi.string().valid('active', 'inactive').default('active'),
+  name: Joi.string()
+    .pattern(/^[A-Za-z\s]+$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Name must contain only letters and spaces",
+      "string.empty": "Name is required",
+    }),
+  description: Joi.string(),
+  status: Joi.string().valid("active", "inactive").default("active"),
 });
 
-
 export const updateCategorySchema = Joi.object({
-    name: Joi.string()
-        .pattern(/^[A-Za-z\s]+$/)
-        .required()
-        .messages({
-            'string.pattern.base': 'Name must contain only letters and spaces',
-            'string.empty': 'Name is required',
-        }),
-    description: Joi.string(),
-    status: Joi.string().valid('active', 'inactive')
+  name: Joi.string()
+    .pattern(/^[A-Za-z\s]+$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Name must contain only letters and spaces",
+      "string.empty": "Name is required",
+    }),
+  description: Joi.string(),
+  status: Joi.string().valid("active", "inactive"),
 }).min(1);
