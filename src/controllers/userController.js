@@ -125,15 +125,20 @@ export const videoCall = async (req, res) => {
     const callerId = req.user._id;
     const { receiverId } = req.body;
 
+    if (!receiverId) {
+      return res.status(400).json({ message: "Receiver ID is required" });
+    }
+
+    // Check subscription plan
     const userPlan = await SubscriptionPlan.findOne({ user: callerId });
     console.log("user plan : ", userPlan);
 
+    // Set call duration based on plan
+    let callDuration;
     if (!userPlan) {
-      return res.status(400).json({ message: "You have no active plans" });
-    }
-
-    if (!receiverId) {
-      return res.status(400).json({ message: "Receiver ID is required" });
+      callDuration = 2 * 60; // 2 minutes in seconds
+    } else {
+      callDuration = -1; // -1 or null can be used to represent unlimited
     }
 
     const channelName = `call_${callerId}_${receiverId}`;
@@ -142,9 +147,11 @@ export const videoCall = async (req, res) => {
 
     const callerToken = genrateRtcToken(callerUid, channelName);
     const receiverToken = genrateRtcToken(receiverUid, channelName);
+
     return res.status(200).json({
       message: "Call tokens generated successfully",
       data: {
+        callDuration, // send this to frontend so it can manage timer
         caller: {
           channeltoken: callerToken,
           channelName: channelName,
