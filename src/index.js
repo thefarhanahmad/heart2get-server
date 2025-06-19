@@ -573,6 +573,16 @@ io.on("connection", (socket) => {
   });
 });
 
+function setUserbussy(to, from) {
+  activeCalls.set(to, from);
+  activeCalls.set(from, to);
+}
+
+function removeUserbussy(to, from) {
+  activeCalls.delete(to);
+  activeCalls.delete(from);
+}
+
 // Cron Jobs expiring subscriptions
 autoExpireSubscriptions();
 
