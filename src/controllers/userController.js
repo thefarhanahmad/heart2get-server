@@ -126,7 +126,7 @@ export const videoCall = async (req, res) => {
     const { receiverId } = req.body;
 
     const userPlan = await SubscriptionPlan.findOne({ user: callerId });
-    console.log("user plan : ", userPlane);
+    console.log("user plan : ", userPlan);
 
     if (!userPlan) {
       return res.status(400).json({ message: "You have no active plans" });
