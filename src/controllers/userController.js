@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import genrateRtcToken from "../utils/agoraTokenGenerator.js";
-import SubscriptionPlan from "../model/subscriptionPlanModel.js"
+import SubscriptionPlan from "../models/subscriptionPlanModel.js";
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -121,16 +121,15 @@ export const deleteUser = async (req, res) => {
 
 //videocall route
 export const videoCall = async (req, res) => {
-
-
   try {
     const callerId = req.user._id;
     const { receiverId } = req.body;
 
-    const userPlan = await SubscriptionPlan.findOne({user:callerId})
+    const userPlan = await SubscriptionPlan.findOne({ user: callerId });
+    console.log("user plan : ", userPlane);
 
-    if(!userPlan){
-          return res.status(400).json({ message: "You have no active plans" });
+    if (!userPlan) {
+      return res.status(400).json({ message: "You have no active plans" });
     }
 
     if (!receiverId) {
