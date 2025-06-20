@@ -129,26 +129,35 @@ export const videoCall = async (req, res) => {
       return res.status(400).json({ message: "Receiver ID is required" });
     }
 
+    // Check subscription plans for both users
+    const callerPlan = await SubscriptionPlan.findOne({ user: callerId });
+    const receiverPlan = await SubscriptionPlan.findOne({ user: receiverId });
+
+    const callerHasPlan = !!callerPlan;
+    const receiverHasPlan = !!receiverPlan;
+
+    // Set call duration
+    let callDuration;
+    if (callerHasPlan && receiverHasPlan) {
+      callDuration = -1; // unlimited
+    } else {
+      callDuration = 2 * 60; // 2 minutes
+    }
+
     const channelName = `call_${callerId}_${receiverId}`;
     const callerUid = Date.now() % (2 ** 31 - 1);
     const receiverUid = callerUid + 1;
 
-    const callerToken = genrateRtcToken(
-      callerUid,
-      channelName,
-      callerId,
-      receiverId
-    );
-    const receiverToken = genrateRtcToken(
-      receiverUid,
-      channelName,
-      receiverId,
-      callerId
-    );
+    const callerToken = genrateRtcToken(callerUid, channelName);
+    const receiverToken = genrateRtcToken(receiverUid, channelName);
 
     return res.status(200).json({
       message: "Call tokens generated successfully",
       data: {
+        callDuration,
+        bothHavePlan: callerHasPlan && receiverHasPlan,
+        callerHasPlan,
+        receiverHasPlan,
         caller: {
           channeltoken: callerToken,
           channelName: channelName,
