@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import genrateRtcToken from "../utils/agoraTokenGenerator.js";
-import SubscriptionPlan from "../models/subscriptionPlanModel.js";
+import UserSubscription from "../models/userSubscriptionModel.js";
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -130,8 +130,14 @@ export const videoCall = async (req, res) => {
     }
 
     // Check subscription plans for both users
-    const callerPlan = await SubscriptionPlan.findOne({ user: callerId });
-    const receiverPlan = await SubscriptionPlan.findOne({ user: receiverId });
+    const callerPlan = await UserSubscription.findOne({
+      user_id: callerId,
+      status: "active",
+    });
+    const receiverPlan = await UserSubscription.findOne({
+      user_id: receiverId,
+      status: "active",
+    });
 
     const callerHasPlan = !!callerPlan;
     const receiverHasPlan = !!receiverPlan;
@@ -139,7 +145,7 @@ export const videoCall = async (req, res) => {
     // Set call duration
     let callDuration;
     if (callerHasPlan && receiverHasPlan) {
-      callDuration = -1; // unlimited
+      callDuration = -1;
     } else {
       callDuration = 2 * 60; // 2 minutes
     }
