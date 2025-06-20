@@ -129,37 +129,26 @@ export const videoCall = async (req, res) => {
       return res.status(400).json({ message: "Receiver ID is required" });
     }
 
-    // Get both caller and receiver users
-    const [callerPlan, receiverPlan] = await Promise.all([
-      SubscriptionPlan.findOne({ user: callerId }),
-      SubscriptionPlan.findOne({ user: receiverId }),
-    ]);
-
-    // Debug logs (optional)
-    console.log("Caller Plan:", callerPlan);
-    console.log("Receiver Plan:", receiverPlan);
-
-    // Determine call duration
-    let callDuration;
-    if (!callerPlan || !receiverPlan) {
-      // One or both don't have a plan → limit duration
-      callDuration = 2 * 60; // 2 minutes
-    } else {
-      // Both have valid plans → unlimited
-      callDuration = -1;
-    }
-
     const channelName = `call_${callerId}_${receiverId}`;
     const callerUid = Date.now() % (2 ** 31 - 1);
     const receiverUid = callerUid + 1;
 
-    const callerToken = genrateRtcToken(callerUid, channelName);
-    const receiverToken = genrateRtcToken(receiverUid, channelName);
+    const callerToken = genrateRtcToken(
+      callerUid,
+      channelName,
+      callerId,
+      receiverId
+    );
+    const receiverToken = genrateRtcToken(
+      receiverUid,
+      channelName,
+      receiverId,
+      callerId
+    );
 
     return res.status(200).json({
       message: "Call tokens generated successfully",
       data: {
-        callDuration, // frontend uses this to auto-end call if needed
         caller: {
           channeltoken: callerToken,
           channelName: channelName,
@@ -180,10 +169,9 @@ export const videoCall = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error generating video call tokens:", error);
-    return res.status(500).json({
-      message: "Error generating call tokens",
-      error: error.message,
-    });
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Error generating call tokens", error: error.message });
   }
 };
