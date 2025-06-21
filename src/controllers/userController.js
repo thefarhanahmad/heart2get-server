@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import genrateRtcToken from "../utils/agoraTokenGenerator.js";
 import UserSubscription from "../models/userSubscriptionModel.js";
+import CallLog from "../models/callLog.js";
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -144,10 +145,28 @@ export const videoCall = async (req, res) => {
 
     // Set call duration
     let callDuration;
+
+    // Check if they have previously used the free call
+    const previousFreeCall = await CallLog.findOne({
+      $or: [
+        { caller: callerId, receiver: receiverId },
+        { caller: receiverId, receiver: callerId },
+      ],
+      wasFreeCall: true,
+    });
+
     if (callerHasPlan && receiverHasPlan) {
       callDuration = -1;
+    } else if (!callerHasPlan && !receiverHasPlan) {
+      if (previousFreeCall) {
+        return res.status(403).json({
+          message:
+            "You’ve already used your free video call. Please purchase a plan to continue.",
+        });
+      }
+      callDuration = 2 * 60;
     } else {
-      callDuration = 2 * 60; // 2 minutes
+      callDuration = -1;
     }
 
     const channelName = `call_${callerId}_${receiverId}`;
