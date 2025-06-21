@@ -130,11 +130,11 @@ export const videoCall = async (req, res) => {
       return res.status(400).json({ message: "Receiver ID is required" });
     }
 
-    // Check subscription plans for both users
     const callerPlan = await UserSubscription.findOne({
       user_id: callerId,
       status: "active",
     });
+
     const receiverPlan = await UserSubscription.findOne({
       user_id: receiverId,
       status: "active",
@@ -143,10 +143,6 @@ export const videoCall = async (req, res) => {
     const callerHasPlan = !!callerPlan;
     const receiverHasPlan = !!receiverPlan;
 
-    // Set call duration
-    let callDuration;
-
-    // Check if they have previously used the free call
     const previousFreeCall = await CallLog.findOne({
       $or: [
         { caller: callerId, receiver: receiverId },
@@ -155,9 +151,13 @@ export const videoCall = async (req, res) => {
       wasFreeCall: true,
     });
 
+    let callDuration;
+
     if (callerHasPlan && receiverHasPlan) {
+      // ✅ Unlimited call
       callDuration = -1;
     } else if (!callerHasPlan && !receiverHasPlan) {
+      // ❌ Neither has plan
       if (previousFreeCall) {
         return res.status(403).json({
           message:
@@ -165,8 +165,14 @@ export const videoCall = async (req, res) => {
         });
       }
       callDuration = 2 * 60;
-    } else {
-      callDuration = -1;
+    } else if (!callerHasPlan || !receiverHasPlan) {
+      // ❌ One has plan, one doesn't
+      if (previousFreeCall) {
+        return res.status(403).json({
+          message: "Both users need an active plan to make a call.",
+        });
+      }
+      callDuration = 2 * 60; // 2 min allowed only if it's the first time
     }
 
     const channelName = `call_${callerId}_${receiverId}`;
@@ -204,9 +210,10 @@ export const videoCall = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "Error generating call tokens", error: error.message });
+    res.status(500).json({
+      message: "Error generating call tokens",
+      error: error.message,
+    });
   }
 };
 
