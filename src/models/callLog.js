@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const callLogSchema = new mongoose.Schema({
   caller: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -7,4 +7,5 @@ const callLogSchema = new mongoose.Schema({
   wasFreeCall: { type: Boolean, default: false },
 });
 
-module.exports = mongoose.model("CallLog", callLogSchema);
+const CallLog = mongoose.model("CallLog", callLogSchema);
+export default CallLog;

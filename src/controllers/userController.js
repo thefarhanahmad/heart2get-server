@@ -209,3 +209,32 @@ export const videoCall = async (req, res) => {
       .json({ message: "Error generating call tokens", error: error.message });
   }
 };
+
+export const saveCallLog = async (req, res) => {
+  try {
+    const { caller, receiver, wasFreeCall } = req.body;
+
+    if (!caller || !receiver) {
+      return res
+        .status(400)
+        .json({ message: "Caller and receiver are required" });
+    }
+
+    const call = await CallLog.create({
+      caller,
+      receiver,
+      wasFreeCall: !!wasFreeCall,
+    });
+
+    return res.status(201).json({
+      message: "Call log saved successfully",
+      data: call,
+    });
+  } catch (error) {
+    console.error("Error saving call log:", error);
+    res.status(500).json({
+      message: "Failed to save call log",
+      error: error.message,
+    });
+  }
+};

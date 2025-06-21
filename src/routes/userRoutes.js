@@ -14,6 +14,7 @@ import {
   updateUser,
   deleteUser,
   videoCall,
+  saveCallLog,
 } from "../controllers/userController.js";
 import {
   setupProfile,
@@ -77,6 +78,7 @@ const upload = multer({
 router.use(protect);
 
 router.post("/videocall", videoCall);
+router.post("/save-call-log", saveCallLog);
 
 // support tickets
 router.get("/tickets", getUserSupportTickets);
