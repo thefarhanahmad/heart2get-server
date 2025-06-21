@@ -24,6 +24,7 @@ import User from "./models/userModel.js";
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 
 // Middleware
