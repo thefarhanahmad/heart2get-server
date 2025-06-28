@@ -10,10 +10,8 @@ const addressSchema = Joi.object({
   city: Joi.string().required().messages({
     "any.required": "City is required",
   }),
-  pincode: Joi.string().required().messages({
-    "any.required": "Pincode is required",
-  }),
-  locality: Joi.string().allow(""),
+  pincode: Joi.string().allow("").optional(),
+  locality: Joi.string().allow("").optional(),
 });
 
 export const createUserSchema = Joi.object({
