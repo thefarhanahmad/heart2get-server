@@ -7,9 +7,7 @@ const addressSchema = Joi.object({
   state: Joi.string().required().messages({
     "any.required": "State is required",
   }),
-  city: Joi.string().required().messages({
-    "any.required": "City is required",
-  }),
+  city: Joi.string().allow("").optional(),
   pincode: Joi.string().allow("").optional(),
   locality: Joi.string().allow("").optional(),
 });

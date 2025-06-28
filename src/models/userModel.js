@@ -47,11 +47,11 @@ const addressSchema = new mongoose.Schema(
     },
     city: {
       type: String,
-      required: [true, "City is required"],
+      required: false,
     },
     pincode: {
       type: String,
-      required: [true, "Pincode is required"],
+      required: false,
     },
     locality: String,
   },

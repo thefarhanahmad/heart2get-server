@@ -287,7 +287,7 @@ export const getUserDetails = async (req, res) => {
         skin_color: targetUser.skin_color,
         height: targetUser.height,
         weight: targetUser.weight,
-        match_percentage: matchScore, 
+        match_percentage: matchScore,
       },
     });
   } catch (error) {
