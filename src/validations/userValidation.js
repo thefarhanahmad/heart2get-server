@@ -26,13 +26,9 @@ export const createUserSchema = Joi.object({
     "string.email": "Please enter a valid email",
     "any.required": "Email is required",
   }),
-  mobile: Joi.string()
-    .required()
-    .pattern(/^\+?[1-9]\d{1,14}$/)
-    .messages({
-      "string.pattern.base": "Please enter a valid mobile number",
-      "any.required": "Mobile number is required",
-    }),
+  mobile: Joi.string().required().messages({
+    "any.required": "Mobile number is required",
+  }),
   country_code: Joi.string(),
   i_am: Joi.string().required().valid("Male", "Female", "Other").messages({
     "any.only": "Gender must be either Male, Female, or Other",
@@ -86,11 +82,9 @@ export const updateUserSchema = Joi.object({
   email: Joi.string().email().messages({
     "string.email": "Please enter a valid email",
   }),
-  mobile: Joi.string()
-    .pattern(/^\+?[1-9]\d{1,14}$/)
-    .messages({
-      "string.pattern.base": "Please enter a valid mobile number",
-    }),
+  mobile: Joi.string().required().messages({
+    "any.required": "Mobile number is required",
+  }),
   country_code: Joi.string(),
   i_am: Joi.string().valid("Male", "Female", "Other").messages({
     "any.only": "Gender must be either Male, Female, or Other",
