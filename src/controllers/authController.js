@@ -16,7 +16,10 @@ export const sendOTP = async (req, res) => {
     const { mobile, countryCode } = req.body;
     const fullMobile = `${countryCode}${mobile}`;
 
-    const otp = generateOTP();
+    // Hardcode OTP as "1234" for the test number +972501234567
+    const isTestNumber = fullMobile === "+972501234567";
+    const otp = isTestNumber ? "1234" : generateOTP(); // Use 1234 for test number, else generate random OTP
+
     console.log("Generated OTP:", otp);
 
     // Save OTP and expiry
@@ -32,10 +35,11 @@ export const sendOTP = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Send OTP via SMS
-    const otpMessage = `Heart2Get Verification Code: ${otp}\nThis code is valid for 10 minutes.\nFor your security, do not share this code with anyone.`;
-
-    await sendSMS(fullMobile, otpMessage);
+    // Send OTP via SMS (skip for test number to avoid SMS costs)
+    if (!isTestNumber) {
+      const otpMessage = `Heart2Get Verification Code: ${otp}\nThis code is valid for 10 minutes.\nFor your security, do not share this code with anyone.`;
+      await sendSMS(fullMobile, otpMessage);
+    }
 
     res.status(200).json({
       status: true,
@@ -64,25 +68,31 @@ export const verifyOTP = async (req, res) => {
     const user = await User.findOne({ mobile });
     console.log("user", user);
 
-    if (!user) {
-      return res.status(400).json({
-        status: false,
-        message: "Mobile number not found",
-      });
+    // 🔥 Special case: Test number (501234567)
+    const isTestNumber = mobile === "2501234567";
+    if (isTestNumber) {
+      if (otp !== "1234") {
+        // Only accept "1234" for test number
+        return res.status(400).json({
+          status: false,
+          message: "For test number, use OTP: 1234",
+        });
+      }
     }
-
-    if (!user.otp || user.otpExpiry < Date.now()) {
-      return res.status(400).json({
-        status: false,
-        message: "OTP has expired. Please request a new one.",
-      });
-    }
-
-    if (user.otp !== otp) {
-      return res.status(400).json({
-        status: false,
-        message: "Invalid OTP. Please check and try again.",
-      });
+    // Standard OTP validation for other numbers
+    else {
+      if (!user.otp || user.otpExpiry < Date.now()) {
+        return res.status(400).json({
+          status: false,
+          message: "OTP has expired. Please request a new one.",
+        });
+      }
+      if (user.otp !== otp) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid OTP. Please check and try again.",
+        });
+      }
     }
 
     // ✅ OTP is valid — clear it
