@@ -17,8 +17,8 @@ export const sendOTP = async (req, res) => {
     const fullMobile = `${countryCode}${mobile}`;
 
     // Hardcode OTP as "1234" for the test number +972501234567
-    const isTestNumber = fullMobile === "+972501234567";
-    const otp = isTestNumber ? "1234" : generateOTP(); // Use 1234 for test number, else generate random OTP
+    const isTestNumber = fullMobile === "+9725012345678";
+    const otp = isTestNumber ? "1234" : generateOTP();
 
     console.log("Generated OTP:", otp);
 
@@ -68,8 +68,8 @@ export const verifyOTP = async (req, res) => {
     const user = await User.findOne({ mobile });
     console.log("user", user);
 
-    // 🔥 Special case: Test number (501234567)
-    const isTestNumber = mobile === "2501234567";
+    // 🔥 Special case: Test number (5012345678)
+    const isTestNumber = mobile === "5012345678";
     if (isTestNumber) {
       if (otp !== "1234") {
         // Only accept "1234" for test number
